@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+            android:orderInCategory="1"
+            android:id="@+id/action_search_feed"
+            android:icon="@drawable/ic_search"
+            android:title="@string/search"
+            app:showAsAction="always" />
+
+
+    <item
+        android:id="@+id/menu_item_feed_toggle_played_items"
+        android:checkable="true"
+        android:checked="true"
+        android:icon="@drawable/ic_visibility_on"
+        android:title="@string/feed_toggle_show_played_items"
+        app:showAsAction="collapseActionView" />
+
+    <item
+            android:id="@+id/menu_item_feed_channel_list"
+            android:icon="@drawable/ic_channels"
+            android:title="@string/channels"
+            android:orderInCategory="3"
+            app:showAsAction="ifRoom" />
+</menu>

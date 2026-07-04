@@ -1,0 +1,45 @@
+allprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+        withSourcesJar()
+    }
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+    tasks.matching { it.name == 'test' || it.name == 'check' }.configureEach {
+        enabled = false
+        group = null
+    }
+    version 'v5.2.0'
+    group 'com.github.InfinityLoop1308.PipePipeExtractor'
+
+    repositories {
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+    }
+
+    afterEvaluate {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                }
+            }
+        }
+    }
+
+    ext {
+        nanojsonVersion = "1d9e1aea9049fc9f85e68b43ba39fe7be1c1f751"
+        spotbugsVersion = "4.10.2"
+    }
+}
+
+dependencies {
+    api project(':extractor')
+    implementation project(':timeago-parser')
+}
