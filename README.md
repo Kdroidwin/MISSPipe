@@ -1,1 +1,2 @@
 # MISSPipe
+MISSAVの動画を見るためのオープンソースのAndroidアプリ
