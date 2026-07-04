@@ -1,2 +1,4 @@
 # MISSPipe
 MISSAVの動画を見るためのオープンソースのAndroidアプリ
+
+PipePipeをベースに、非公式APIを利用したMISSAV専用フォークです。
