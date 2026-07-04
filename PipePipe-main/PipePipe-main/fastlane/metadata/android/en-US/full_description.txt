@@ -1,0 +1,15 @@
+NewPipe, reimagined: faster, more stable, and packed with more features.
+
+<b>Beyond NewPipe</b>
+
+* SponsorBlock (YouTube & BiliBili)
+* ReturnYouTubeDislike
+* Bullet comments / Live Chats
+* Search filters
+* Search & sort in local playlists
+* Filter out unwanted items by keywords/channels/...
+* Music player mode & Background playing
+* Sleep timer
+* Fullscreen gestures
+* Login to watch restricted / premium contents
+* … and many minor improvements

@@ -1,0 +1,32 @@
+### New Features
+
+- Support rewind livestreams up to 4 hours (YouTube)
+- Support audio track selection
+- Add "Paid" indicator on members' videos on What's New feed
+- Reset playback speed to 1x when reaching livestream edge
+
+### Bug Fixes
+
+- Video fails to load sometimes (YouTube)
+- Shorts playlists can't be parsed (YouTube)
+- Failed to load channel videos sometimes (YouTube)
+- "Could not get uploader name" when parsing some playlists (YouTube)
+- Shorts no thumbnail (YouTube)
+- Podcast playlists are not shown in playlist tab (YouTube)
+- Cannot parse videos with multi creators (YouTube)
+- Danmaku not shown for some videos (NicoNico)
+- Correctly extract video owner names (BiliBili)
+- Video jumps back several seconds when switching to popup player
+- Subtitle size doesn't respect system setting
+- Various random crashes under certain conditions
+- Unexpected crash on Android 15+
+- "Marked as watched" not working in bookmark playlists
+- UI crashed while trying to add a video with unknown uploader into a playlist
+- Failed to clear webview cookie from the application under certain conditions
+- Network requests not working properly on Android 6
+
+### Others
+
+- Update translations (Turkish, German)
+- Toolbar back button should back to previous screen instead of main screen
+- Remove "sort by upload date" search filter (YouTube)

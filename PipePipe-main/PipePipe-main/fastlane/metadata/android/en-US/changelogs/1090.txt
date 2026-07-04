@@ -1,0 +1,7 @@
+### Bug Fixes
+
+- Search results have wrong titles and thumbnails sometimes (YouTube)
+
+### Behavior
+
+- Temporarily disable YouTube login since video extraction for logged-in accounts is broken now

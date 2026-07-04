@@ -1,0 +1,2 @@
+UI: change the name and icon in service selecting page for BiliBili and NicoNico
+fix: some devices can not extract any av video (BiliBili)
