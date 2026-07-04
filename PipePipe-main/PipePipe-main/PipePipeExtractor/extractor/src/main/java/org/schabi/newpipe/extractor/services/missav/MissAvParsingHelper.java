@@ -296,6 +296,16 @@ public final class MissAvParsingHelper {
             }
         }
 
+        final Matcher compactCodeMatcher = Pattern.compile(
+                "\\b([a-z]{2,12})(\\d{2,8})\\b",
+                Pattern.CASE_INSENSITIVE).matcher(query);
+        while (compactCodeMatcher.find()) {
+            final String prefix = compactCodeMatcher.group(1).toLowerCase(Locale.ROOT);
+            if (!"fc".equals(prefix) && !"fc2".equals(prefix) && !"ppv".equals(prefix)) {
+                codes.add(prefix + compactCodeMatcher.group(2));
+            }
+        }
+
         final Matcher numberMatcher = Pattern.compile("\\b(\\d{6,})\\b").matcher(query);
         while (numberMatcher.find()) {
             codes.add("fc2-ppv-" + numberMatcher.group(1));
@@ -431,10 +441,12 @@ public final class MissAvParsingHelper {
             return false;
         }
         final String plainId = extractPlainId(id).toLowerCase();
-        return plainId.length() >= 4
-                && plainId.contains("-")
-                && plainId.matches(".*\\d.*")
-                && plainId.matches("[a-z0-9][a-z0-9_-]*[a-z0-9]");
+        if (plainId.length() < 4
+                || !plainId.matches(".*\\d.*")
+                || !plainId.matches("[a-z0-9][a-z0-9_-]*[a-z0-9]")) {
+            return false;
+        }
+        return plainId.contains("-") || plainId.matches("[a-z]{2,12}\\d{2,8}");
     }
 
     public static String localizeUrl(final String url) {

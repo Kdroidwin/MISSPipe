@@ -143,6 +143,7 @@ final class MissAvSearchInfoItemExtractor implements StreamInfoItemExtractor {
             case "fc2":
             case "fc2ppv":
             case "mdtm":
+            case "mdx":
             case "onex":
             case "miaa":
             case "maan":
