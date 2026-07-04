@@ -19,6 +19,13 @@ PipePipeをベースにした、**MISSAV専用フォーク**です。
 
 **注意**: Google Playには公開されていません。信頼できるソースからのみAPKを入手してください。
 
+## スクリーンショット
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/da0557ec-e75c-4935-b37c-d482ead576b7" width="48%" />
+  <img src="https://github.com/user-attachments/assets/7acd430d-41ad-4c80-bb66-c91a3d4f15b3" width="48%" />
+</p>
+
 ## ビルド方法
 
 ```bash
