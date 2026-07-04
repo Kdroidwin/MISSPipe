@@ -14,7 +14,7 @@ PipePipeをベースにした、**MISSAV専用フォーク**です。
 
 ## インストール方法
 
-1. Releasesから最新のAPKをダウンロード
+1. [Releases](https://github.com/Kdroidwin/MISSPipe/releases)から最新のAPKをダウンロード
 2. または自分でビルドして使用
 
 **注意**: Google Playには公開されていません。信頼できるソースからのみAPKを入手してください。
