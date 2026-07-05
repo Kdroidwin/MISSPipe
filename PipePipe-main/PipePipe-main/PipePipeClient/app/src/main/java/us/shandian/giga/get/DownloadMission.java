@@ -31,6 +31,10 @@ public class DownloadMission extends Mission {
     static final int BLOCK_SIZE = 512 * 1024;
 
     private static final String TAG = "DownloadMission";
+    private static final String KISSJAV_MARKER = "#kissjav=1";
+    private static final String KISSJAV_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     public static final int ERROR_NOTHING = -1;
     public static final int ERROR_PATH_CREATION = 1000;
@@ -225,14 +229,19 @@ public class DownloadMission extends Mission {
 
     HttpURLConnection openConnection(String url, boolean headRequest, long rangeStart, long rangeEnd) throws IOException {
         String cookie = null;
+        final boolean useKissJavHeaders = url.contains(KISSJAV_MARKER) || isKissJavUrl(url);
         if(url.contains("#cookie=")) {
             cookie = URLDecoder.decode(url.split("#cookie=")[1].split("&")[0]);
             url = url.split("#cookie=")[0];
         }
+        url = url.replace(KISSJAV_MARKER, "");
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", DownloaderImpl.USER_AGENT);
         setRequestPropertyIfDownloadingBilibili(url, conn);
+        if (useKissJavHeaders) {
+            setKissJavRequestProperties(conn);
+        }
         if (cookie != null) conn.setRequestProperty("Cookie", cookie);
 
         conn.setRequestProperty("Accept", "*/*");
@@ -251,6 +260,17 @@ public class DownloadMission extends Mission {
         }
 
         return conn;
+    }
+
+    private static boolean isKissJavUrl(final String url) {
+        return url != null && (url.contains("kissjav.li/") || url.contains("cdnhop.com/"));
+    }
+
+    private static void setKissJavRequestProperties(final HttpURLConnection conn) {
+        conn.setRequestProperty("User-Agent", KISSJAV_USER_AGENT);
+        conn.setRequestProperty("Referer", "https://kissjav.li/");
+        conn.setRequestProperty("Origin", "https://kissjav.li");
+        conn.setRequestProperty("Accept-Language", "ja,en-US;q=0.8,en;q=0.6");
     }
 
     /**

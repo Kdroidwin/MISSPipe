@@ -64,6 +64,9 @@ public class PlayerDataSource {
     private static final String MISSAV_USER_AGENT =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+    private static final String KISSJAV_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     /**
      * An approximately 4.3 times greater value than the
@@ -191,6 +194,22 @@ public class PlayerDataSource {
 
     public ProgressiveMediaSource.Factory getProgressiveMediaSourceFactory() {
         return new ProgressiveMediaSource.Factory(cachelessDataSourceFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getKissJavProgressiveMediaSourceFactory() {
+        final Map<String, String> headers = Map.of(
+                "Referer", "https://kissjav.li/",
+                "Origin", "https://kissjav.li",
+                "Accept", "*/*",
+                "Accept-Language", "ja,en-US;q=0.8,en;q=0.6"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(KISSJAV_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
     }
 

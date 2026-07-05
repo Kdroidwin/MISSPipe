@@ -160,6 +160,9 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         } else if (ServiceList.MissAV.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.HLS) {
             return buildMissAvHlsMediaSource(dataSource, stream, streamInfo, cacheKey, metadata);
+        } else if (ServiceList.KissJAV.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildKissJavProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
         }
 
         final DeliveryMethod deliveryMethod = stream.getDeliveryMethod();
@@ -176,6 +179,26 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
             default:
                 throw new IllegalArgumentException("Unsupported delivery type: " + deliveryMethod);
         }
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildKissJavProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+
+        if (isNullOrEmpty(url)) {
+            throw new IOException(
+                    "Try to generate a KissJAV progressive media source from an empty URL");
+        }
+        return dataSource.getKissJavProgressiveMediaSourceFactory().createMediaSource(
+                new MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(url.replace("#kissjav=1", "")))
+                        .setCustomCacheKey(cacheKey)
+                        .build());
     }
 
     @NonNull

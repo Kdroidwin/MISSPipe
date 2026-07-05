@@ -2,6 +2,7 @@
 <resources tools:ignore="MissingTranslation" xmlns:tools="http://schemas.android.com/tools">
 <string name="main_bg_subtitle">Tap the magnifying glass to get started.</string>
 <string name="missav">MissAV</string>
+<string name="kissjav">KissJAV</string>
 <string name="upload_date_text">Published on %1$s</string>
 <string name="no_player_found">No stream player found. Install VLC?</string>
 <string name="no_player_found_toast">No stream player found (you can install VLC to play it).</string>

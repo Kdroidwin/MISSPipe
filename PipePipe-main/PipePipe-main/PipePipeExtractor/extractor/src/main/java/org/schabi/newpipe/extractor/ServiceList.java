@@ -2,6 +2,7 @@ package org.schabi.newpipe.extractor;
 
 import org.schabi.newpipe.extractor.services.bandcamp.BandcampService;
 import org.schabi.newpipe.extractor.services.bilibili.BilibiliService;
+import org.schabi.newpipe.extractor.services.kissjav.KissJavService;
 import org.schabi.newpipe.extractor.services.media_ccc.MediaCCCService;
 import org.schabi.newpipe.extractor.services.missav.MissAvService;
 import org.schabi.newpipe.extractor.services.peertube.PeertubeService;
@@ -47,15 +48,16 @@ public final class ServiceList {
     public static final BilibiliService BiliBili = new BilibiliService(5);
     public static final NiconicoService NicoNico = new NiconicoService(6);
     public static final MissAvService MissAV = new MissAvService(0);
+    public static final KissJavService KissJAV = new KissJavService(1);
     /**
      * When creating a new service, put this service in the end of this list,
      * and give it the next free id.
      *
-     * MISSPipe exposes MissAV only. Legacy service constants stay initialized because the client
-     * still contains service-specific branches that will be removed incrementally.
+     * MISSPipe exposes MissAV and KissJAV. Legacy service constants stay initialized because the
+     * client still contains service-specific branches that will be removed incrementally.
      */
     private static final List<StreamingService> SERVICES = Collections.unmodifiableList(
-            Collections.singletonList(MissAV));
+            java.util.Arrays.asList(MissAV, KissJAV));
 
     /**
      * Get all the supported services.

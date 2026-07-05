@@ -80,7 +80,7 @@ public final class NewPipe {
     }
 
     public static StreamingService getService(final int serviceId) throws ExtractionException {
-        if (serviceId == 7 && ServiceList.all().size() == 1) {
+        if (serviceId == 7) {
             return ServiceList.MissAV;
         }
         return ServiceList.all().stream()
@@ -116,7 +116,7 @@ public final class NewPipe {
     }
 
     public static String getNameOfService(final int id) {
-        if (id == 7 && ServiceList.all().size() == 1) {
+        if (id == 7) {
             return ServiceList.MissAV.getServiceInfo().getName();
         }
         try {
