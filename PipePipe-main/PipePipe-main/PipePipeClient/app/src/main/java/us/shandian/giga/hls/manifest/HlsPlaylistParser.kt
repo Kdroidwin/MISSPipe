@@ -143,9 +143,13 @@ class HlsPlaylistParser {
 
     private fun resolveUrl(sourceUrl: String, reference: String): String {
         val missAvMarked = sourceUrl.contains(MISSAV_MARKER)
-        val resolved = URI(sourceUrl.substringBefore(MISSAV_MARKER)).resolve(reference).toString()
+        val pornhubMarked = sourceUrl.contains(PORNHUB_MARKER)
+        val cleanSourceUrl = sourceUrl.substringBefore(MISSAV_MARKER).substringBefore(PORNHUB_MARKER)
+        val resolved = URI(cleanSourceUrl).resolve(reference).toString()
         return if (missAvMarked && !resolved.contains(MISSAV_MARKER)) {
             resolved.substringBefore('#') + MISSAV_MARKER
+        } else if (pornhubMarked && !resolved.contains(PORNHUB_MARKER)) {
+            resolved.substringBefore('#') + PORNHUB_MARKER
         } else {
             resolved
         }
@@ -153,6 +157,7 @@ class HlsPlaylistParser {
 
     private companion object {
         const val MISSAV_MARKER = "#missav=1"
+        const val PORNHUB_MARKER = "#pornhub=1"
         const val EXT_X_KEY = "#EXT-X-KEY:"
         const val EXT_X_DISCONTINUITY = "#EXT-X-DISCONTINUITY"
     }

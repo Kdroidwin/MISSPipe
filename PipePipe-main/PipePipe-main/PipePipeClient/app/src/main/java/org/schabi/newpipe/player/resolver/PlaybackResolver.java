@@ -160,9 +160,26 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         } else if (ServiceList.MissAV.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.HLS) {
             return buildMissAvHlsMediaSource(dataSource, stream, streamInfo, cacheKey, metadata);
+        } else if (ServiceList.MissAV.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP
+                && stream.getContent().contains("#85po=1")) {
+            return buildEightyFivePoProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.KissJAV.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP
+                && stream.getContent().contains("#85po=1")) {
+            return buildEightyFivePoProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
         } else if (ServiceList.KissJAV.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
             return buildKissJavProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.EightyFivePo.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildEightyFivePoProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Pornhub.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.HLS) {
+            return buildPornhubHlsMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Pornhub.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildPornhubProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
         }
 
         final DeliveryMethod deliveryMethod = stream.getDeliveryMethod();
@@ -197,6 +214,65 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
                 new MediaItem.Builder()
                         .setTag(metadata)
                         .setUri(Uri.parse(url.replace("#kissjav=1", "")))
+                        .setCustomCacheKey(cacheKey)
+                        .build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildEightyFivePoProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+
+        if (isNullOrEmpty(url)) {
+            throw new IOException(
+                    "Try to generate an 85po progressive media source from an empty URL");
+        }
+        return dataSource.getEightyFivePoProgressiveMediaSourceFactory().createMediaSource(
+                new MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(url.replace("#85po=1", "")))
+                        .setCustomCacheKey(cacheKey)
+                        .build());
+    }
+
+    @NonNull
+    private static <T extends Stream> HlsMediaSource buildPornhubHlsMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate a Pornhub HLS media source from an empty URL");
+        }
+        return dataSource.getPornhubHlsMediaSourceFactory().createMediaSource(
+                new MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(url.replace("#pornhub=1", "")))
+                        .setCustomCacheKey(cacheKey)
+                        .build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildPornhubProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+
+        if (isNullOrEmpty(url)) {
+            throw new IOException(
+                    "Try to generate a Pornhub progressive media source from an empty URL");
+        }
+        return dataSource.getPornhubProgressiveMediaSourceFactory().createMediaSource(
+                new MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(url.replace("#pornhub=1", "")))
                         .setCustomCacheKey(cacheKey)
                         .build());
     }

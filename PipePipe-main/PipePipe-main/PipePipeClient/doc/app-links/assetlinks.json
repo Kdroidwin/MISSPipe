@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.missxxx.misspipe",
+      "sha256_cert_fingerprints": [
+        "08:E7:93:FE:26:A5:C3:C2:2A:E6:8D:02:AF:70:73:03:D4:E1:A0:EA:BA:94:E2:C7:B6:CC:55:9D:8B:3C:2D:AC"
+      ]
+    }
+  }
+]

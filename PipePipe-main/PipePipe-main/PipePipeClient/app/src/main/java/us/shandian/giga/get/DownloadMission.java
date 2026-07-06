@@ -32,9 +32,17 @@ public class DownloadMission extends Mission {
 
     private static final String TAG = "DownloadMission";
     private static final String KISSJAV_MARKER = "#kissjav=1";
+    private static final String EIGHTYFIVEPO_MARKER = "#85po=1";
+    private static final String PORNHUB_MARKER = "#pornhub=1";
     private static final String KISSJAV_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    private static final String EIGHTYFIVEPO_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+    private static final String PORNHUB_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
     public static final int ERROR_NOTHING = -1;
     public static final int ERROR_PATH_CREATION = 1000;
@@ -230,17 +238,28 @@ public class DownloadMission extends Mission {
     HttpURLConnection openConnection(String url, boolean headRequest, long rangeStart, long rangeEnd) throws IOException {
         String cookie = null;
         final boolean useKissJavHeaders = url.contains(KISSJAV_MARKER) || isKissJavUrl(url);
+        final boolean useEightyFivePoHeaders =
+                url.contains(EIGHTYFIVEPO_MARKER) || isEightyFivePoUrl(url);
+        final boolean usePornhubHeaders = url.contains(PORNHUB_MARKER) || isPornhubUrl(url);
         if(url.contains("#cookie=")) {
             cookie = URLDecoder.decode(url.split("#cookie=")[1].split("&")[0]);
             url = url.split("#cookie=")[0];
         }
         url = url.replace(KISSJAV_MARKER, "");
+        url = url.replace(EIGHTYFIVEPO_MARKER, "");
+        url = url.replace(PORNHUB_MARKER, "");
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", DownloaderImpl.USER_AGENT);
         setRequestPropertyIfDownloadingBilibili(url, conn);
         if (useKissJavHeaders) {
             setKissJavRequestProperties(conn);
+        }
+        if (useEightyFivePoHeaders) {
+            setEightyFivePoRequestProperties(conn);
+        }
+        if (usePornhubHeaders) {
+            setPornhubRequestProperties(conn);
         }
         if (cookie != null) conn.setRequestProperty("Cookie", cookie);
 
@@ -266,11 +285,35 @@ public class DownloadMission extends Mission {
         return url != null && (url.contains("kissjav.li/") || url.contains("cdnhop.com/"));
     }
 
+    private static boolean isEightyFivePoUrl(final String url) {
+        return url != null && url.contains("85po.com/") && url.contains("/get_file/");
+    }
+
+    private static boolean isPornhubUrl(final String url) {
+        return url != null && (url.contains("phncdn.com/") || url.contains("pornhub.com/video/get_media"));
+    }
+
     private static void setKissJavRequestProperties(final HttpURLConnection conn) {
         conn.setRequestProperty("User-Agent", KISSJAV_USER_AGENT);
         conn.setRequestProperty("Referer", "https://kissjav.li/");
         conn.setRequestProperty("Origin", "https://kissjav.li");
         conn.setRequestProperty("Accept-Language", "ja,en-US;q=0.8,en;q=0.6");
+    }
+
+    private static void setEightyFivePoRequestProperties(final HttpURLConnection conn) {
+        conn.setRequestProperty("User-Agent", EIGHTYFIVEPO_USER_AGENT);
+        conn.setRequestProperty("Referer", "https://www.85po.com/ja/");
+        conn.setRequestProperty("Origin", "https://www.85po.com");
+        conn.setRequestProperty("Accept-Language", "ja,en-US;q=0.8,en;q=0.6");
+    }
+
+    private static void setPornhubRequestProperties(final HttpURLConnection conn) {
+        conn.setRequestProperty("User-Agent", PORNHUB_USER_AGENT);
+        conn.setRequestProperty("Referer", "https://jp.pornhub.com/");
+        conn.setRequestProperty("Origin", "https://jp.pornhub.com");
+        conn.setRequestProperty("Accept-Language", "ja,en-US;q=0.8,en;q=0.6");
+        conn.setRequestProperty("Cookie",
+                "age_verified=1; platform=pc; accessAgeDisclaimerPH=1; cookieConsent=3");
     }
 
     /**

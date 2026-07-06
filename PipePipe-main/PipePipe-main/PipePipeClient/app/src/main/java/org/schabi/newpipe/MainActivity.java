@@ -61,6 +61,7 @@ import org.schabi.newpipe.databinding.InstanceSpinnerLayoutBinding;
 import org.schabi.newpipe.databinding.ToolbarLayoutBinding;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
@@ -466,8 +467,9 @@ public class MainActivity extends AppCompatActivity {
                     .add(R.id.menu_services_group, s.getServiceId(), ORDER, title)
                     .setIcon(ServiceHelper.getIcon(s.getServiceId()));
 
-            // peertube specifics
-            if (s.getServiceId() == 3) {
+            // PeerTube specifics only apply to the legacy PeerTube service, not to MISSPipe's
+            // fourth visible service which reuses id 3 for Pornhub.
+            if (ServiceList.PeerTube.equals(s)) {
                 enhancePeertubeMenu(s, menuItem);
             }
         }

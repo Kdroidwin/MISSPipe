@@ -2,10 +2,12 @@ package org.schabi.newpipe.extractor;
 
 import org.schabi.newpipe.extractor.services.bandcamp.BandcampService;
 import org.schabi.newpipe.extractor.services.bilibili.BilibiliService;
+import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoService;
 import org.schabi.newpipe.extractor.services.kissjav.KissJavService;
 import org.schabi.newpipe.extractor.services.media_ccc.MediaCCCService;
 import org.schabi.newpipe.extractor.services.missav.MissAvService;
 import org.schabi.newpipe.extractor.services.peertube.PeertubeService;
+import org.schabi.newpipe.extractor.services.pornhub.PornhubService;
 import org.schabi.newpipe.extractor.services.soundcloud.SoundcloudService;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeService;
 import org.schabi.newpipe.extractor.services.niconico.NiconicoService;
@@ -49,15 +51,17 @@ public final class ServiceList {
     public static final NiconicoService NicoNico = new NiconicoService(6);
     public static final MissAvService MissAV = new MissAvService(0);
     public static final KissJavService KissJAV = new KissJavService(1);
+    public static final EightyFivePoService EightyFivePo = new EightyFivePoService(2);
+    public static final PornhubService Pornhub = new PornhubService(3);
     /**
      * When creating a new service, put this service in the end of this list,
      * and give it the next free id.
      *
-     * MISSPipe exposes MissAV and KissJAV. Legacy service constants stay initialized because the
+     * MISSPipe exposes MissAV, KissJAV, 85po and Pornhub. Legacy service constants stay initialized because the
      * client still contains service-specific branches that will be removed incrementally.
      */
     private static final List<StreamingService> SERVICES = Collections.unmodifiableList(
-            java.util.Arrays.asList(MissAV, KissJAV));
+            java.util.Arrays.asList(MissAV, KissJAV, EightyFivePo, Pornhub));
 
     /**
      * Get all the supported services.

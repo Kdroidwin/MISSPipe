@@ -12,6 +12,8 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
+import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoParsingHelper;
+import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoVideoSource;
 import org.schabi.newpipe.extractor.stream.AudioStream;
 import org.schabi.newpipe.extractor.stream.DeliveryMethod;
 import org.schabi.newpipe.extractor.stream.Description;
@@ -33,6 +35,7 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     private static final int MAX_RELATED_ITEMS = 24;
     private Document document;
     private String hlsUrl;
+    private boolean eightyFivePoPage;
 
     public MissAvStreamExtractor(final StreamingService service, final LinkHandler linkHandler) {
         super(service, linkHandler);
@@ -41,6 +44,12 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public void onFetchPage(@Nonnull final Downloader downloader)
             throws IOException, ExtractionException {
+        eightyFivePoPage = isEightyFivePoUrl(getUrl());
+        if (eightyFivePoPage) {
+            document = EightyFivePoParsingHelper.fetchDocument(getUrl(),
+                    EightyFivePoParsingHelper.BASE_URL + "/ja/");
+            return;
+        }
         document = MissAvParsingHelper.fetchDocument(getUrl());
     }
 
@@ -48,6 +57,10 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public String getName() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            final String title = EightyFivePoParsingHelper.extractTitle(document);
+            return title.isEmpty() ? getId() : title;
+        }
         final String title = MissAvParsingHelper.text(
                 document.selectFirst("h1.text-base, h1"));
         return title.isEmpty() ? getId() : title;
@@ -57,6 +70,9 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public String getThumbnailUrl() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractThumbnail(document);
+        }
         return MissAvParsingHelper.extractThumbnail(document);
     }
 
@@ -64,6 +80,20 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public Description getDescription() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            final List<String> lines = new ArrayList<>();
+            final String description = EightyFivePoParsingHelper.extractDescription(document);
+            if (!description.isEmpty()) {
+                lines.add(description);
+            }
+            final List<String> tags = EightyFivePoParsingHelper.extractTags(document);
+            if (!tags.isEmpty()) {
+                lines.add("Tags: " + String.join(", ", tags));
+            }
+            return lines.isEmpty()
+                    ? Description.EMPTY_DESCRIPTION
+                    : new Description(String.join("\n", lines), Description.PLAIN_TEXT);
+        }
         final List<String> lines = new ArrayList<>();
         addLine(lines, "\u52d5\u753b\u306e\u8a73\u7d30",
                 MissAvParsingHelper.extractPageDescription(document));
@@ -125,6 +155,10 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Nonnull
     @Override
     public List<String> getTags() throws ParsingException {
+        if (eightyFivePoPage) {
+            ensureFetched();
+            return EightyFivePoParsingHelper.extractTags(document);
+        }
         return getActressTags();
     }
 
@@ -132,6 +166,9 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public String getUploaderUrl() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractUploaderUrl(document);
+        }
         final List<String> urls = MissAvParsingHelper.actressUrls(document);
         if (!urls.isEmpty()) {
             return urls.get(0);
@@ -147,6 +184,9 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public String getUploaderName() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractUploaderName(document);
+        }
         final List<String> actresses = MissAvParsingHelper.actressNames(document);
         return actresses.isEmpty() ? "MissAV" : String.join(" / ", actresses);
     }
@@ -155,6 +195,9 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public String getHlsUrl() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return "";
+        }
         if (hlsUrl == null || hlsUrl.isEmpty()) {
             hlsUrl = MissAvParsingHelper.extractHlsUrl(document);
         }
@@ -169,6 +212,10 @@ public final class MissAvStreamExtractor extends StreamExtractor {
     @Override
     public List<VideoStream> getVideoStreams() throws IOException, ExtractionException {
         final List<VideoStream> streams = new ArrayList<>();
+        if (eightyFivePoPage) {
+            addEightyFivePoStreams(streams);
+            return streams;
+        }
         addHlsStream(streams, "hls", "HLS", getHlsUrl());
         return streams;
     }
@@ -337,5 +384,28 @@ public final class MissAvStreamExtractor extends StreamExtractor {
         if (value != null && !value.isEmpty()) {
             lines.add(label + ": " + value);
         }
+    }
+
+    private void addEightyFivePoStreams(final List<VideoStream> streams)
+            throws IOException, ExtractionException {
+        List<EightyFivePoVideoSource> sources =
+                EightyFivePoParsingHelper.findVideoSources(getUrl(), getId(), document);
+        if (sources.isEmpty()) {
+            throw new ParsingException("Could not find 85po video URL");
+        }
+        for (final EightyFivePoVideoSource source : sources) {
+            streams.add(new VideoStream.Builder()
+                    .setId(source.id)
+                    .setContent(source.url, true)
+                    .setIsVideoOnly(false)
+                    .setResolution(source.resolution)
+                    .setMediaFormat(MediaFormat.MPEG_4)
+                    .setDeliveryMethod(DeliveryMethod.PROGRESSIVE_HTTP)
+                    .build());
+        }
+    }
+
+    private static boolean isEightyFivePoUrl(final String url) {
+        return url != null && EightyFivePoParsingHelper.normalizeUrl(url).contains("85po.com/");
     }
 }

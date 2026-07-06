@@ -10,7 +10,13 @@ def keyPath = System.getenv("KEY_PATH")
 def keyStorePassword = System.getenv("KEY_STORE_PASSWORD")
 def signingKeyAlias = System.getenv("KEY_ALIAS")
 def signingKeyPassword = System.getenv("KEY_PASSWORD")
-def localReleaseKeyStore = new File(System.properties['user.home'], ".android/debug.keystore")
+def isReleasePackagingTask = gradle.startParameter.taskNames.any {
+    def taskName = it.toLowerCase()
+    taskName.contains("release")
+            && (taskName.contains("assemble")
+            || taskName.contains("bundle")
+            || taskName.contains("package"))
+}
 
 android {
     compileSdk 37
@@ -20,8 +26,8 @@ android {
         minSdk 26
         //noinspection OldTargetApi,ExpiredTargetSdkVersion
         targetSdk 35
-        versionCode 1110
-        versionName "5.3.0"
+        versionCode 1127
+        versionName "5.4.6"
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -43,14 +49,6 @@ android {
     }
 
     signingConfigs {
-        if (localReleaseKeyStore.exists()) {
-            localRelease {
-                storeFile localReleaseKeyStore
-                storePassword "android"
-                keyAlias "androiddebugkey"
-                keyPassword "android"
-            }
-        }
         if (keyPath && keyStorePassword && signingKeyAlias && signingKeyPassword) {
             release {
                 storeFile file(keyPath)
@@ -81,8 +79,10 @@ android {
         release {
             if (signingConfigs.findByName("release")) {
                 signingConfig signingConfigs.release
-            } else if (signingConfigs.findByName("localRelease")) {
-                signingConfig signingConfigs.localRelease
+            } else if (isReleasePackagingTask) {
+                throw new GradleException("Release APK/AAB builds require KEY_PATH, "
+                        + "KEY_STORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD. "
+                        + "Debug keystore fallback is disabled to keep update signatures stable.")
             }
             if (System.properties.containsKey('packageSuffix')) {
                 applicationIdSuffix System.getProperty('packageSuffix')

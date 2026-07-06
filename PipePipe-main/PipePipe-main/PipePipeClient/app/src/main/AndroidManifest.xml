@@ -56,6 +56,7 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:logo="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/OpeningTheme"
         android:resizeableActivity="true"
         android:enableOnBackInvokedCallback="false"
@@ -200,6 +201,44 @@
                 android:label="@string/preferred_open_action_share_menu_title"
                 android:taskAffinity=""
                 android:theme="@style/RouterActivityThemeDark" android:exported="true">
+
+            <!-- MISSPipe verified App Links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="pornhub.com" />
+                <data android:host="www.pornhub.com" />
+                <data android:host="jp.pornhub.com" />
+                <data android:host="*.pornhub.com" />
+                <data android:host="missav.ws" />
+                <data android:host="missav.ai" />
+                <data android:host="kissjav.li" />
+                <data android:host="85po.com" />
+                <data android:host="www.85po.com" />
+                <data android:pathPrefix="/" />
+            </intent-filter>
+
+            <!-- MISSPipe non-verified fallback links for browsers that still send http URLs. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:host="pornhub.com" />
+                <data android:host="www.pornhub.com" />
+                <data android:host="jp.pornhub.com" />
+                <data android:host="*.pornhub.com" />
+                <data android:host="missav.ws" />
+                <data android:host="missav.ai" />
+                <data android:host="kissjav.li" />
+                <data android:host="85po.com" />
+                <data android:host="www.85po.com" />
+                <data android:pathPrefix="/" />
+            </intent-filter>
 
             <!-- Youtube filter -->
             <intent-filter>

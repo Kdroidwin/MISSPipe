@@ -44,6 +44,8 @@ class HlsManifestResolver(
 
             val parseSourceUrl = if (url.contains("#missav=1")) {
                 "$finalUrl#missav=1"
+            } else if (url.contains("#pornhub=1")) {
+                "$finalUrl#pornhub=1"
             } else {
                 finalUrl
             }

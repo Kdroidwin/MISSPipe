@@ -43,6 +43,9 @@ public final class MissAvParsingHelper {
     private static final Pattern M3U8_PACKED_PATTERN = Pattern.compile("'m3u8(.*?)video");
     private static final Pattern M3U8_URL_PATTERN = Pattern.compile(
             "https?:(?:\\\\/|/)(?:\\\\/|/)[^\"'\\s<>]+?\\.m3u8[^\"'\\s<>]*");
+    private static final Pattern ESCAPED_M3U8_URL_PATTERN = Pattern.compile(
+            "https?(?:%3A|:)(?:%2F|\\\\/|/){2}[^\"'\\s<>]+?\\.m3u8[^\"'\\s<>]*",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern OG_IMAGE_PATTERN = Pattern.compile(
             "<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+cover-n\\.jpg)");
     private static final int DOCUMENT_CACHE_SIZE = 24;
@@ -600,6 +603,13 @@ public final class MissAvParsingHelper {
                 return candidate;
             }
         }
+        final Matcher escapedUrlMatcher = ESCAPED_M3U8_URL_PATTERN.matcher(html);
+        if (escapedUrlMatcher.find()) {
+            final String candidate = decodeUrl(unescapeUrl(escapedUrlMatcher.group()));
+            if (isValidHlsUrl(candidate)) {
+                return candidate;
+            }
+        }
 
         final Matcher matcher = M3U8_PACKED_PATTERN.matcher(doc.html());
         if (!matcher.find()) {
@@ -632,10 +642,20 @@ public final class MissAvParsingHelper {
                 .replace("&amp;", "&");
     }
 
+    private static String decodeUrl(final String url) {
+        try {
+            return java.net.URLDecoder.decode(url, StandardCharsets.UTF_8.name());
+        } catch (final IllegalArgumentException | java.io.UnsupportedEncodingException ignored) {
+            return url;
+        }
+    }
+
     private static boolean isValidHlsUrl(final String url) {
-        return (url.startsWith("https://") || url.startsWith("http://"))
+        final String cleanUrl = url == null ? "" : url.split("[?#]", 2)[0];
+        return url != null
+                && (url.startsWith("https://") || url.startsWith("http://"))
                 && url.contains(".")
-                && url.endsWith("/playlist.m3u8")
+                && cleanUrl.endsWith(".m3u8")
                 && !url.contains("://.")
                 && !url.contains(" ");
     }

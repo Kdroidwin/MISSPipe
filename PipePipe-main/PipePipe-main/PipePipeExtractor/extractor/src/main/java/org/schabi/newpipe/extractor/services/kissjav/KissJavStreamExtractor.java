@@ -11,6 +11,8 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
+import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoParsingHelper;
+import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoVideoSource;
 import org.schabi.newpipe.extractor.stream.AudioStream;
 import org.schabi.newpipe.extractor.stream.DeliveryMethod;
 import org.schabi.newpipe.extractor.stream.Description;
@@ -32,6 +34,7 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     private static final int MAX_RELATED_ITEMS = 24;
     private Document document;
     private String videoUrl;
+    private boolean eightyFivePoPage;
 
     public KissJavStreamExtractor(final StreamingService service, final LinkHandler linkHandler) {
         super(service, linkHandler);
@@ -40,6 +43,12 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public void onFetchPage(@Nonnull final Downloader downloader)
             throws IOException, ExtractionException {
+        eightyFivePoPage = isEightyFivePoUrl(getUrl());
+        if (eightyFivePoPage) {
+            document = EightyFivePoParsingHelper.fetchDocument(getUrl(),
+                    EightyFivePoParsingHelper.BASE_URL + "/ja/");
+            return;
+        }
         document = KissJavParsingHelper.fetchDocument(getUrl(), KissJavParsingHelper.BASE_URL + "/");
         if (KissJavParsingHelper.tryExtractVideoUrl(document).isEmpty()) {
             final String canonicalUrl = KissJavParsingHelper.extractCanonicalVideoUrl(
@@ -59,6 +68,10 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public String getName() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            final String title = EightyFivePoParsingHelper.extractTitle(document);
+            return title.isEmpty() ? getId() : title;
+        }
         final String title = KissJavParsingHelper.extractTitle(document);
         return title.isEmpty() ? getId() : title;
     }
@@ -67,6 +80,9 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public String getThumbnailUrl() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractThumbnail(document);
+        }
         return KissJavParsingHelper.extractThumbnail(document);
     }
 
@@ -74,6 +90,20 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public Description getDescription() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            final List<String> lines = new ArrayList<>();
+            final String description = EightyFivePoParsingHelper.extractDescription(document);
+            if (!description.isEmpty()) {
+                lines.add(description);
+            }
+            final List<String> tags = EightyFivePoParsingHelper.extractTags(document);
+            if (!tags.isEmpty()) {
+                lines.add("Tags: " + String.join(", ", tags));
+            }
+            return lines.isEmpty()
+                    ? Description.EMPTY_DESCRIPTION
+                    : new Description(String.join("\n", lines), Description.PLAIN_TEXT);
+        }
         final List<String> lines = new ArrayList<>();
         final String description = KissJavParsingHelper.extractDescription(document);
         if (!description.isEmpty()) {
@@ -91,18 +121,27 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public long getLength() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractDuration(document);
+        }
         return KissJavParsingHelper.extractDuration(document);
     }
 
     @Nonnull
     @Override
     public String getUploaderName() {
+        if (eightyFivePoPage && document != null) {
+            return EightyFivePoParsingHelper.extractUploaderName(document);
+        }
         return "KissJAV";
     }
 
     @Nonnull
     @Override
     public String getUploaderUrl() {
+        if (eightyFivePoPage && document != null) {
+            return EightyFivePoParsingHelper.extractUploaderUrl(document);
+        }
         return KissJavParsingHelper.BASE_URL + "/";
     }
 
@@ -110,6 +149,9 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     @Override
     public List<String> getTags() throws ParsingException {
         ensureFetched();
+        if (eightyFivePoPage) {
+            return EightyFivePoParsingHelper.extractTags(document);
+        }
         return KissJavParsingHelper.extractTags(document);
     }
 
@@ -128,6 +170,10 @@ public final class KissJavStreamExtractor extends StreamExtractor {
     public List<VideoStream> getVideoStreams() throws IOException, ExtractionException {
         ensureFetched();
         final List<VideoStream> streams = new ArrayList<>();
+        if (eightyFivePoPage) {
+            addEightyFivePoStreams(streams);
+            return streams;
+        }
         List<KissJavVideoSource> sources = KissJavParsingHelper.extractVideoSources(document);
         if (sources.isEmpty()) {
             sources = Collections.singletonList(new KissJavVideoSource("mp4",
@@ -162,6 +208,9 @@ public final class KissJavStreamExtractor extends StreamExtractor {
         ensureFetched();
         final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
         final Set<String> seenUrls = new HashSet<>();
+        if (eightyFivePoPage) {
+            return collector;
+        }
         final String currentUrl = KissJavParsingHelper.normalizeUrl(getUrl()).split("[?#]", 2)[0];
         for (final KissJavSearchResult result
                 : KissJavParsingHelper.extractVideoCards(document, MAX_RELATED_ITEMS + 1)) {
@@ -230,9 +279,32 @@ public final class KissJavStreamExtractor extends StreamExtractor {
         return tryFetchAndExtract(canonicalUrl, KissJavParsingHelper.BASE_URL + "/");
     }
 
+    private void addEightyFivePoStreams(final List<VideoStream> streams)
+            throws IOException, ExtractionException {
+        List<EightyFivePoVideoSource> sources =
+                EightyFivePoParsingHelper.findVideoSources(getUrl(), getId(), document);
+        if (sources.isEmpty()) {
+            throw new ParsingException("Could not find 85po video URL");
+        }
+        for (final EightyFivePoVideoSource source : sources) {
+            streams.add(new VideoStream.Builder()
+                    .setId(source.id)
+                    .setContent(source.url, true)
+                    .setIsVideoOnly(false)
+                    .setResolution(source.resolution)
+                    .setMediaFormat(MediaFormat.MPEG_4)
+                    .setDeliveryMethod(DeliveryMethod.PROGRESSIVE_HTTP)
+                    .build());
+        }
+    }
+
     private void ensureFetched() throws ParsingException {
         if (document == null) {
             throw new ParsingException("KissJAV page was not fetched");
         }
+    }
+
+    private static boolean isEightyFivePoUrl(final String url) {
+        return url != null && EightyFivePoParsingHelper.normalizeUrl(url).contains("85po.com/");
     }
 }

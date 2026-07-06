@@ -67,6 +67,12 @@ public class PlayerDataSource {
     private static final String KISSJAV_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    private static final String EIGHTYFIVEPO_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+    private static final String PORNHUB_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
     /**
      * An approximately 4.3 times greater value than the
@@ -207,6 +213,56 @@ public class PlayerDataSource {
         final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
                 new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
                         .setUserAgent(KISSJAV_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getEightyFivePoProgressiveMediaSourceFactory() {
+        final Map<String, String> headers = Map.of(
+                "Referer", "https://www.85po.com/ja/",
+                "Origin", "https://www.85po.com",
+                "Accept", "*/*",
+                "Accept-Language", "ja,en-US;q=0.8,en;q=0.6"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(EIGHTYFIVEPO_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public HlsMediaSource.Factory getPornhubHlsMediaSourceFactory() {
+        final Map<String, String> headers = Map.of(
+                "Referer", "https://jp.pornhub.com/",
+                "Origin", "https://jp.pornhub.com",
+                "Accept", "*/*",
+                "Accept-Language", "ja,en-US;q=0.8,en;q=0.6",
+                "Cookie", "age_verified=1; platform=pc; accessAgeDisclaimerPH=1; cookieConsent=3"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(PORNHUB_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new HlsMediaSource.Factory(upstreamFactory)
+                .setAllowChunklessPreparation(true);
+    }
+
+    public ProgressiveMediaSource.Factory getPornhubProgressiveMediaSourceFactory() {
+        final Map<String, String> headers = Map.of(
+                "Referer", "https://jp.pornhub.com/",
+                "Origin", "https://jp.pornhub.com",
+                "Accept", "*/*",
+                "Accept-Language", "ja,en-US;q=0.8,en;q=0.6",
+                "Cookie", "age_verified=1; platform=pc; accessAgeDisclaimerPH=1; cookieConsent=3"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(PORNHUB_USER_AGENT)
                         .setDefaultRequestProperties(headers))
                 .setTransferListener(transferListener);
         return new ProgressiveMediaSource.Factory(upstreamFactory)

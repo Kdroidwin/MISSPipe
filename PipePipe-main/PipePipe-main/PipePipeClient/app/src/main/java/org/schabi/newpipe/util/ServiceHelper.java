@@ -42,7 +42,7 @@ public final class ServiceHelper {
             case 2:
                 return R.drawable.place_holder_gadse;
             case 3:
-                return R.drawable.place_holder_peertube;
+                return R.drawable.ic_movie;
             case 4:
                 return R.drawable.place_holder_bandcamp;
             case 5:
@@ -262,6 +262,10 @@ public final class ServiceHelper {
             case "YouTube":
             case "BiliBili":
             case "NicoNico":
+            case "MissAV":
+            case "KissJAV":
+            case "85po":
+            case "Pornhub":
                 return false;
             default:
                 return true;
@@ -269,7 +273,7 @@ public final class ServiceHelper {
     }
 
     public static void initService(final Context context, final int serviceId) {
-        if (serviceId == ServiceList.PeerTube.getServiceId()) {
+        if (isActiveService(ServiceList.PeerTube, serviceId)) {
             final SharedPreferences sharedPreferences = PreferenceManager
                     .getDefaultSharedPreferences(context);
             final String json = sharedPreferences.getString(context.getString(
@@ -288,7 +292,7 @@ public final class ServiceHelper {
             final String url = jsonObject.getString("url");
             final PeertubeInstance instance = new PeertubeInstance(url, name);
             ServiceList.PeerTube.setInstance(instance);
-        } else if (serviceId == ServiceList.NicoNico.getServiceId()) {
+        } else if (isActiveService(ServiceList.NicoNico, serviceId)) {
             final SharedPreferences sharedPreferences = PreferenceManager
                     .getDefaultSharedPreferences(context);
             final String tokens = sharedPreferences.getString(context.getString(
@@ -300,7 +304,7 @@ public final class ServiceHelper {
             final Set<String> cookieFunctions = sharedPreferences.getStringSet(context.getString(
                     R.string.cookie_functions_niconico_key), null);
             ServiceList.NicoNico.setCookieFunctions(cookieFunctions);
-        } else if (serviceId == ServiceList.BiliBili.getServiceId()) {
+        } else if (isActiveService(ServiceList.BiliBili, serviceId)) {
             final SharedPreferences sharedPreferences = PreferenceManager
                     .getDefaultSharedPreferences(context);
             final String tokens = sharedPreferences.getString(context.getString(
@@ -312,7 +316,7 @@ public final class ServiceHelper {
             final Set<String> cookieFunctions = sharedPreferences.getStringSet(context.getString(
                     R.string.cookie_functions_bilibili_key), null);
             ServiceList.BiliBili.setCookieFunctions(cookieFunctions);
-        } else if (serviceId == ServiceList.YouTube.getServiceId()) {
+        } else if (isActiveService(ServiceList.YouTube, serviceId)) {
             final SharedPreferences sharedPreferences = PreferenceManager
                     .getDefaultSharedPreferences(context);
             final String tokens = sharedPreferences.getString(context.getString(
@@ -333,6 +337,15 @@ public final class ServiceHelper {
 //                ServiceList.YouTube.setTokens(sharedPreferences.getString(context.getString(R.string.override_cookies_youtube_value_key), null));
 //            }
 //            CookieUtils.exportCookiesToNetscapeYouTube(context, ServiceList.YouTube.getTokens());
+        }
+    }
+
+    private static boolean isActiveService(final StreamingService expectedService,
+                                           final int serviceId) {
+        try {
+            return NewPipe.getService(serviceId).equals(expectedService);
+        } catch (final ExtractionException e) {
+            return false;
         }
     }
 

@@ -7,6 +7,7 @@
     <string-array name="service_list">
         <item>@string/missav</item>
         <item>@string/kissjav</item>
+        <item>@string/eightyfivepo</item>
     </string-array>
     <string name="current_service_key">service</string>
     <string name="default_service_value">@string/missav</string>
