@@ -1,0 +1,28 @@
+package org.schabi.newpipe.extractor.services.tokyomotion;
+
+final class TokyoMotionSearchResult {
+    final String id;
+    final String url;
+    final String title;
+    final String thumbnailUrl;
+    final long duration;
+    final String uploaderName;
+    final String uploaderUrl;
+
+    TokyoMotionSearchResult(final String id,
+                        final String url,
+                        final String title,
+                        final String thumbnailUrl,
+                        final long duration,
+                        final String uploaderName,
+                        final String uploaderUrl) {
+        this.id = id;
+        this.url = url;
+        this.title = title;
+        this.thumbnailUrl = thumbnailUrl;
+        this.duration = duration;
+        this.uploaderName = uploaderName;
+        this.uploaderUrl = uploaderUrl;
+    }
+}
+

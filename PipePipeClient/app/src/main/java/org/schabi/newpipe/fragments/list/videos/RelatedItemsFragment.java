@@ -1,0 +1,175 @@
+package org.schabi.newpipe.fragments.list.videos;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.preference.PreferenceManager;
+
+import org.schabi.newpipe.R;
+import org.schabi.newpipe.databinding.RelatedItemsHeaderBinding;
+import org.schabi.newpipe.error.UserAction;
+import org.schabi.newpipe.extractor.InfoItem;
+import org.schabi.newpipe.extractor.ListExtractor;
+import org.schabi.newpipe.extractor.stream.StreamInfo;
+import org.schabi.newpipe.fragments.list.BaseListInfoFragment;
+import org.schabi.newpipe.info_list.ItemViewMode;
+import org.schabi.newpipe.ktx.ViewUtils;
+import org.schabi.newpipe.util.RelatedItemInfo;
+
+import java.util.Queue;
+import java.util.function.Supplier;
+
+import io.reactivex.rxjava3.core.Single;
+
+public class RelatedItemsFragment extends BaseListInfoFragment<InfoItem, RelatedItemInfo>
+        implements SharedPreferences.OnSharedPreferenceChangeListener {
+    private RelatedItemInfo relatedItemInfo;
+
+    /*//////////////////////////////////////////////////////////////////////////
+    // Views
+    //////////////////////////////////////////////////////////////////////////*/
+
+    private RelatedItemsHeaderBinding headerBinding;
+
+    public static RelatedItemsFragment getInstance(final StreamInfo info) {
+        final RelatedItemsFragment instance = new RelatedItemsFragment();
+        instance.setInitialData(info);
+        return instance;
+    }
+
+    public RelatedItemsFragment() {
+        super(UserAction.REQUESTED_STREAM);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+    // LifeCycle
+    //////////////////////////////////////////////////////////////////////////*/
+
+    @Override
+    public View onCreateView(@NonNull final LayoutInflater inflater,
+                             @Nullable final ViewGroup container,
+                             @Nullable final Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_related_items, container, false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        headerBinding = null;
+        super.onDestroyView();
+    }
+
+    @Override
+    protected Supplier<View> getListHeaderSupplier() {
+        if (relatedItemInfo == null || relatedItemInfo.getRelatedItems() == null) {
+            return null;
+        }
+
+        headerBinding = RelatedItemsHeaderBinding
+                .inflate(activity.getLayoutInflater(), itemsList, false);
+
+        final SharedPreferences pref = PreferenceManager
+                .getDefaultSharedPreferences(requireContext());
+        final boolean autoplay = pref.getBoolean(getString(R.string.auto_queue_key), false);
+        headerBinding.autoplaySwitch.setChecked(autoplay);
+        headerBinding.autoplaySwitch.setOnCheckedChangeListener((compoundButton, b) ->
+                PreferenceManager.getDefaultSharedPreferences(requireContext()).edit()
+                        .putBoolean(getString(R.string.auto_queue_key), b).apply());
+
+        return headerBinding::getRoot;
+    }
+
+    @Override
+    protected Single<ListExtractor.InfoItemsPage<InfoItem>> loadMoreItemsLogic() {
+        return Single.fromCallable(ListExtractor.InfoItemsPage::emptyPage);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+    // Contract
+    //////////////////////////////////////////////////////////////////////////*/
+
+    @Override
+    protected Single<RelatedItemInfo> loadResult(final boolean forceLoad) {
+        return Single.fromCallable(() -> relatedItemInfo);
+    }
+
+    @Override
+    public void showLoading() {
+        super.showLoading();
+        if (headerBinding != null) {
+            headerBinding.getRoot().setVisibility(View.INVISIBLE);
+        }
+    }
+
+    @Override
+    public void handleResult(@NonNull final RelatedItemInfo result) {
+        relatedItemInfo = result;
+        super.handleResult(result);
+
+        if (headerBinding != null) {
+            headerBinding.getRoot().setVisibility(View.VISIBLE);
+        }
+        ViewUtils.slideUp(requireView(), 120, 96, 0.06f);
+
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+    // Utils
+    //////////////////////////////////////////////////////////////////////////*/
+
+    @Override
+    public void setTitle(final String title) {
+        // Nothing to do - override parent
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull final Menu menu,
+                                    @NonNull final MenuInflater inflater) {
+        // Nothing to do - override parent
+    }
+
+    private void setInitialData(final StreamInfo info) {
+        super.setInitialData(info.getServiceId(), info.getUrl(), info.getName());
+        if (this.relatedItemInfo == null) {
+            this.relatedItemInfo = RelatedItemInfo.getInfo(info);
+        }
+    }
+
+    @Override
+    public void writeTo(final Queue<Object> objectsToSave) {
+        super.writeTo(objectsToSave);
+        objectsToSave.add(relatedItemInfo);
+    }
+
+    @Override
+    public void readFrom(@NonNull final Queue<Object> savedObjects) throws Exception {
+        super.readFrom(savedObjects);
+        relatedItemInfo = (RelatedItemInfo) savedObjects.poll();
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences,
+                                          final String s) {
+        if (headerBinding != null) {
+            headerBinding.autoplaySwitch.setChecked(
+                    sharedPreferences.getBoolean(
+                            getString(R.string.auto_queue_key), false));
+        }
+    }
+
+    @Override
+    protected ItemViewMode getItemViewMode() {
+        ItemViewMode mode = super.getItemViewMode();
+        // Only list mode is supported. Either List or card will be used.
+        if (mode != ItemViewMode.LIST && mode != ItemViewMode.CARD) {
+            mode = ItemViewMode.LIST;
+        }
+        return mode;
+    }
+}
