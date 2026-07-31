@@ -1,8 +1,0 @@
-### Bug Fixes
-
-- Video titles sometimes get translated to English (YouTube)
-
-### Others
-
-- Improve stability
-

@@ -239,7 +239,8 @@ public final class TokyoMotionParsingHelper {
                 // The unresolved source is kept only when every candidate fails verification.
             }
         }
-        return new ArrayList<>(resolvedSources.values());
+        return resolvedSources.isEmpty() ? new ArrayList<>(sources)
+                : new ArrayList<>(resolvedSources.values());
     }
 
     private static Map<String, List<String>> mediaHeaders(final String referer) {
@@ -248,8 +249,8 @@ public final class TokyoMotionParsingHelper {
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0"));
         headers.put("Accept", Collections.singletonList(
                 "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5"));
-        headers.put("Accept-Encoding", Collections.singletonList("identity"));
         headers.put("Range", Collections.singletonList("bytes=0-4095"));
+        headers.put("Accept-Encoding", Collections.singletonList("identity"));
         headers.put("Referer", Collections.singletonList(
                 referer == null || referer.isEmpty() ? BASE_URL + "/" : referer));
         return headers;
@@ -262,8 +263,13 @@ public final class TokyoMotionParsingHelper {
         final String hostAndPath = url.substring("https://".length()).toLowerCase(Locale.ROOT);
         final int pathIndex = hostAndPath.indexOf('/');
         final String host = pathIndex < 0 ? hostAndPath : hostAndPath.substring(0, pathIndex);
-        return (host.equals("tokyomotion.net") || host.endsWith(".tokyomotion.net"))
-                && pathIndex >= 0 && hostAndPath.substring(pathIndex).contains("/video/");
+        if (pathIndex < 0 || !hostAndPath.substring(pathIndex).contains(".mp4")) {
+            return false;
+        }
+        return host.equals("tokyomotion.net")
+                || host.endsWith(".tokyomotion.net")
+                || host.equals("tokyo-motion.net")
+                || host.endsWith(".tokyo-motion.net");
     }
 
     private static boolean hasIsoBmffSignature(final byte[] bytes) {

@@ -26,8 +26,8 @@ android {
         minSdk 26
         //noinspection OldTargetApi,ExpiredTargetSdkVersion
         targetSdk 35
-    versionCode 1142
-    versionName "5.6.1"
+    versionCode 1151
+    versionName "5.6.10"
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

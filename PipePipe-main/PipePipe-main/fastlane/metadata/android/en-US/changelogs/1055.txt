@@ -1,3 +1,0 @@
-### Bug Fixes
-
-- New 403 errors (YouTube)

@@ -2,6 +2,7 @@ package org.schabi.newpipe.extractor.services.javnoni;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -89,5 +90,30 @@ public class JavNoniParsingHelperTest {
         final JavNoniVideoSource source = sources.values().iterator().next();
         assertEquals("https://cdn.tnmr/master.m3u8?token=abc#javnoni=1", source.url);
         assertEquals(DeliveryMethod.HLS, source.deliveryMethod);
+    }
+
+    @Test
+    public void rejectsSingleLabelHostsAndAcceptsSignedHlsUrls() {
+        assertFalse(JavNoniParsingHelper.isPlayableVideoUrl(
+                "https://video/player/invalid.mp4"));
+        assertTrue(JavNoniParsingHelper.isPlayableVideoUrl(
+                "https://cfpuuqqygw2d7.tnmr.org/hls/master.m3u8?token=abc"));
+    }
+
+    @Test
+    public void preservesTheEmbedOriginForEachStream() throws Exception {
+        final LinkedHashMap<String, JavNoniVideoSource> sources = new LinkedHashMap<>();
+        final Method method = JavNoniParsingHelper.class.getDeclaredMethod(
+                "putVideoSourcesFromHtml", LinkedHashMap.class, String.class, String.class);
+        method.setAccessible(true);
+
+        method.invoke(null, sources,
+                "<script>const source = {file: 'https://cdn.playmogo.net/video.mp4'};</script>",
+                "https://playmogo.com/e/example");
+
+        assertEquals(1, sources.size());
+        assertEquals("https://cdn.playmogo.net/video.mp4#javnoni=1&ref="
+                        + "https%3A%2F%2Fplaymogo.com%2Fe%2Fexample",
+                sources.values().iterator().next().url);
     }
 }

@@ -10,6 +10,8 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.stream.DeliveryMethod;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -228,16 +230,23 @@ public final class JavNoniParsingHelper {
                                                             final String pageUrl)
             throws IOException, ExtractionException {
         final LinkedHashMap<String, JavNoniVideoSource> sources = new LinkedHashMap<>();
-        putVideoSourcesFromHtml(sources, pageDocument.html());
+        putVideoSourcesFromHtml(sources, pageDocument.html(), pageUrl);
         final String embedUrl = extractEmbedUrl(pageDocument);
         if (!embedUrl.isEmpty()) {
             final Response response = NewPipe.getDownloader().get(embedUrl, browserHeaders(pageUrl));
-            putVideoSourcesFromHtml(sources, response.responseBody());
+            putVideoSourcesFromHtml(sources, response.responseBody(), embedUrl);
             if (sources.isEmpty()) {
                 postEmbedFormForSources(sources, embedUrl, pageUrl, response.responseBody());
             }
         }
-        return new ArrayList<>(sources.values());
+        final List<JavNoniVideoSource> orderedSources = new ArrayList<>(sources.values());
+        orderedSources.sort((left, right) -> {
+            if (left.deliveryMethod == right.deliveryMethod) {
+                return 0;
+            }
+            return left.deliveryMethod == DeliveryMethod.HLS ? -1 : 1;
+        });
+        return orderedSources;
     }
 
     private static void postEmbedFormForSources(
@@ -265,27 +274,34 @@ public final class JavNoniParsingHelper {
                 "application/x-www-form-urlencoded; charset=UTF-8"));
         final Response response = NewPipe.getDownloader().post(embedUrl, headers,
                 formBody(values).getBytes(StandardCharsets.UTF_8));
-        putVideoSourcesFromHtml(sources, response.responseBody());
+        putVideoSourcesFromHtml(sources, response.responseBody(), embedUrl);
     }
 
     private static void putVideoSourcesFromHtml(
             final LinkedHashMap<String, JavNoniVideoSource> sources,
             final String html) {
+        putVideoSourcesFromHtml(sources, html, "");
+    }
+
+    private static void putVideoSourcesFromHtml(
+            final LinkedHashMap<String, JavNoniVideoSource> sources,
+            final String html,
+            final String mediaPageUrl) {
         if (html == null || html.isEmpty()) {
             return;
         }
         final String unescaped = unescapeUrl(html);
-        collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unescaped));
-        collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unescaped));
+        collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unescaped), mediaPageUrl);
+        collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unescaped), mediaPageUrl);
         for (final String unpacked : unpackPackedScripts(unescaped)) {
-            collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unpacked));
-            collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unpacked));
+            collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unpacked), mediaPageUrl);
+            collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unpacked), mediaPageUrl);
         }
         final Matcher atobMatcher = ATOB_PATTERN.matcher(unescaped);
         while (atobMatcher.find()) {
             try {
                 putVideoSourcesFromHtml(sources, new String(java.util.Base64.getDecoder()
-                        .decode(atobMatcher.group(1)), StandardCharsets.UTF_8));
+                        .decode(atobMatcher.group(1)), StandardCharsets.UTF_8), mediaPageUrl);
             } catch (final IllegalArgumentException ignored) {
                 // Continue scanning other player fragments.
             }
@@ -399,20 +415,22 @@ public final class JavNoniParsingHelper {
 
     private static void collectUrlMatches(
             final LinkedHashMap<String, JavNoniVideoSource> sources,
-            final Matcher matcher) {
+            final Matcher matcher,
+            final String mediaPageUrl) {
         while (matcher.find()) {
             final String url = matcher.groupCount() > 0 && matcher.group(1) != null
                     ? matcher.group(1) : matcher.group();
             if (isPlayableVideoUrl(url)) {
-                putVideoSource(sources, url);
+                putVideoSource(sources, url, mediaPageUrl);
             }
         }
     }
 
     private static void putVideoSource(final LinkedHashMap<String, JavNoniVideoSource> sources,
-                                       final String rawUrl) {
-        final String url = appendMarker(absoluteStreamUrl(rawUrl));
-        final String key = url.replace(MARKER, "");
+                                       final String rawUrl,
+                                       final String mediaPageUrl) {
+        final String url = appendMarker(absoluteStreamUrl(rawUrl), mediaPageUrl);
+        final String key = stripMarker(url);
         if (sources.containsKey(key)) {
             return;
         }
@@ -541,9 +559,21 @@ public final class JavNoniParsingHelper {
                 || url.matches(".*/archives/\\d{4}/\\d{2}/?$");
     }
 
-    private static boolean isPlayableVideoUrl(final String url) {
-        final String lower = absoluteStreamUrl(url).split("[?#]", 2)[0].toLowerCase(Locale.ROOT);
-        return lower.startsWith("http") && (lower.endsWith(".m3u8") || lower.endsWith(".mp4"));
+    static boolean isPlayableVideoUrl(final String url) {
+        final String streamUrl = absoluteStreamUrl(url).trim();
+        final String lower = streamUrl.split("[?#]", 2)[0].toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".m3u8") && !lower.endsWith(".mp4")) {
+            return false;
+        }
+        try {
+            final URI uri = new URI(streamUrl);
+            final String scheme = uri.getScheme();
+            final String host = uri.getHost();
+            return ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))
+                    && host != null && host.contains(".") && !host.endsWith(".");
+        } catch (final URISyntaxException e) {
+            return false;
+        }
     }
 
     private static String absoluteStreamUrl(final String url) {
@@ -554,8 +584,19 @@ public final class JavNoniParsingHelper {
         return unescaped;
     }
 
-    private static String appendMarker(final String url) {
-        return url.contains(MARKER) ? url : url + MARKER;
+    private static String appendMarker(final String url, final String mediaPageUrl) {
+        if (url.contains(MARKER)) {
+            return url;
+        }
+        if (mediaPageUrl == null || mediaPageUrl.isEmpty()) {
+            return url + MARKER;
+        }
+        return url + MARKER + "&ref=" + encodeQuery(mediaPageUrl);
+    }
+
+    private static String stripMarker(final String url) {
+        final int markerIndex = url.indexOf(MARKER);
+        return markerIndex < 0 ? url : url.substring(0, markerIndex);
     }
 
     private static String guessResolution(final String value, final String fallback) {

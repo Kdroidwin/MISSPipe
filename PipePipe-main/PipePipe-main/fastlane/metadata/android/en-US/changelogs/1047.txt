@@ -1,5 +1,0 @@
-### Bug Fixes:
-
-- Live replays are not available immediately after ended (YouTube)
-- Can not download on some devices(BiliBili)
-- Can not watch videos when logged in (NicoNico)

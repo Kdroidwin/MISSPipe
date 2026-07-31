@@ -7,7 +7,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.Test;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 public class TokyoMotionParsingHelperTest {
     private static final String VIDEO_HTML = "<html><head>"
@@ -70,5 +72,19 @@ public class TokyoMotionParsingHelperTest {
         assertEquals("creator", factory.getId("https://www.tokyomotion.net/user/creator/videos"));
         assertEquals("https://www.tokyomotion.net/user/creator",
                 factory.getUrl("creator", java.util.Collections.emptyList(), null));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void pinsTokyoMotionProbeResponsesToIdentityEncoding() throws Exception {
+        final Method method = TokyoMotionParsingHelper.class.getDeclaredMethod(
+                "mediaHeaders", String.class);
+        method.setAccessible(true);
+
+        final Map<String, List<String>> headers =
+                (Map<String, List<String>>) method.invoke(null, "https://www.tokyomotion.net/video/1/x");
+
+        assertEquals("identity", headers.get("Accept-Encoding").get(0));
+        assertEquals("bytes=0-4095", headers.get("Range").get(0));
     }
 }

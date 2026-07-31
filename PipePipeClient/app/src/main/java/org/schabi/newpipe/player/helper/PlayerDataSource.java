@@ -13,6 +13,8 @@ import androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory;
 import androidx.media3.exoplayer.hls.playlist.DefaultHlsPlaylistTracker;
 import androidx.media3.exoplayer.smoothstreaming.DefaultSsChunkSource;
 import androidx.media3.exoplayer.smoothstreaming.SsMediaSource;
+import androidx.media3.extractor.DefaultExtractorsFactory;
+import androidx.media3.extractor.mp4.Mp4Extractor;
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory;
 import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultDataSource;
@@ -281,9 +283,14 @@ public class PlayerDataSource {
     }
 
     public HlsMediaSource.Factory getJavNoniHlsMediaSourceFactory() {
+        return getJavNoniHlsMediaSourceFactory(null);
+    }
+
+    public HlsMediaSource.Factory getJavNoniHlsMediaSourceFactory(@Nullable final String mediaPageUrl) {
+        final String mediaOrigin = javNoniMediaOrigin(mediaPageUrl);
         final Map<String, String> headers = Map.of(
-                "Referer", "https://luluvdo.com/",
-                "Origin", "https://luluvdo.com",
+                "Referer", mediaOrigin + "/",
+                "Origin", mediaOrigin,
                 "Accept", "*/*",
                 "Accept-Language", "ja,en-US;q=0.8,en;q=0.6"
         );
@@ -297,9 +304,15 @@ public class PlayerDataSource {
     }
 
     public ProgressiveMediaSource.Factory getJavNoniProgressiveMediaSourceFactory() {
+        return getJavNoniProgressiveMediaSourceFactory(null);
+    }
+
+    public ProgressiveMediaSource.Factory getJavNoniProgressiveMediaSourceFactory(
+            @Nullable final String mediaPageUrl) {
+        final String mediaOrigin = javNoniMediaOrigin(mediaPageUrl);
         final Map<String, String> headers = Map.of(
-                "Referer", "https://luluvdo.com/",
-                "Origin", "https://luluvdo.com",
+                "Referer", mediaOrigin + "/",
+                "Origin", mediaOrigin,
                 "Accept", "*/*",
                 "Accept-Language", "ja,en-US;q=0.8,en;q=0.6"
         );
@@ -310,6 +323,21 @@ public class PlayerDataSource {
                 .setTransferListener(transferListener);
         return new ProgressiveMediaSource.Factory(upstreamFactory)
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    @NonNull
+    private static String javNoniMediaOrigin(@Nullable final String mediaPageUrl) {
+        if (mediaPageUrl == null || mediaPageUrl.isEmpty()) {
+            return "https://luluvdo.com";
+        }
+        final Uri uri = Uri.parse(mediaPageUrl);
+        final String scheme = uri.getScheme();
+        final String authority = uri.getAuthority();
+        if (("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))
+                && authority != null && !authority.isEmpty()) {
+            return scheme.toLowerCase(java.util.Locale.ROOT) + "://" + authority;
+        }
+        return "https://luluvdo.com";
     }
 
     public HlsMediaSource.Factory getJavSbHlsMediaSourceFactory() {
@@ -347,7 +375,9 @@ public class PlayerDataSource {
                         .setUserAgent(TOKYOMOTION_USER_AGENT)
                         .setDefaultRequestProperties(headers))
                 .setTransferListener(transferListener);
-        return new ProgressiveMediaSource.Factory(upstreamFactory)
+        return new ProgressiveMediaSource.Factory(upstreamFactory,
+                new DefaultExtractorsFactory().setMp4ExtractorFlags(
+                        Mp4Extractor.FLAG_WORKAROUND_IGNORE_EDIT_LISTS))
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
     }
 

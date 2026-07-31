@@ -301,10 +301,11 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         if (isNullOrEmpty(url)) {
             throw new IOException("Try to generate a JAV-NONI HLS media source from an empty URL");
         }
-        return dataSource.getJavNoniHlsMediaSourceFactory().createMediaSource(
+        return dataSource.getJavNoniHlsMediaSourceFactory(
+                extractPageReferer(url, "#javnoni=1&ref=")).createMediaSource(
                 new MediaItem.Builder()
                         .setTag(metadata)
-                        .setUri(Uri.parse(url.replace("#javnoni=1", "")))
+                        .setUri(Uri.parse(stripStreamMarker(url, "#javnoni=1")))
                         .setCustomCacheKey(cacheKey)
                         .build());
     }
@@ -321,10 +322,11 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
             throw new IOException(
                     "Try to generate a JAV-NONI progressive media source from an empty URL");
         }
-        return dataSource.getJavNoniProgressiveMediaSourceFactory().createMediaSource(
+        return dataSource.getJavNoniProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#javnoni=1&ref=")).createMediaSource(
                 new MediaItem.Builder()
                         .setTag(metadata)
-                        .setUri(Uri.parse(url.replace("#javnoni=1", "")))
+                        .setUri(Uri.parse(stripStreamMarker(url, "#javnoni=1")))
                         .setCustomCacheKey(cacheKey)
                         .build());
     }

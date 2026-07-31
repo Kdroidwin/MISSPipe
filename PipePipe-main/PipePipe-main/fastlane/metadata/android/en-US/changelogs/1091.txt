@@ -1,4 +1,0 @@
-### Bug Fixes
-
-- Some videos fail to load with "The page needs to be reloaded" error (YouTube)
-- Cannot open videos (NicoNico)
