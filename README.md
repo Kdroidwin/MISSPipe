@@ -1,96 +1,61 @@
-<hr>
-<p align="center"><img src="assets/logo.png" width="150"></p> 
-<h2 align="center"><b>PipePipe</b></h2>
-<h4 align="center">
-NewPipe, reimagined: faster, more stable, and packed with more features.</h4>
-<p align="center"><a href="https://f-droid.org/packages/InfinityLoop1309.NewPipeEnhanced/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid"  width="207" /></a>
-<a href="https://apt.izzysoft.de/fdroid/index/apk/InfinityLoop1309.NewPipeEnhanced"><img src="assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" width="207" /></a></p>
-<hr>
+# MISSPipe
 
-## Beyond NewPipe
+## I miss you...
 
-#### YouTube Enhancements
-* Integrate SponsorBlock for skipping sponsored segments (YouTube & BiliBili) 
-* Restore YouTube dislikes with ReturnYouTubeDislike 
-* Show original titles on YouTube (non-localized) 
-* Log in to access restricted or premium content 
+**An open-source Android app for comfortably browsing MISSAV, PornHub, KISSJAV, 85po, and more**
 
-#### Media Features
-* Display live chats in danmaku-style overlays
-* Support AV1 and VP9 codecs for efficient, high-quality playback 
-* Enable music player mode with background playback 
+A **PipePipe-based fork** dedicated to **R18 video platforms**.
+Block ads and enjoy a smooth video search and viewing experience.
 
-#### Filtering
-* Apply advanced search filters for better discovery 
-* Filter out unwanted items by keywords or channels 
-* Block shorts and paid videos for a cleaner feed 
+## Features
 
-#### Playback Controls
-* Use swipe-to-seek and fullscreen gestures for intuitive navigation 
-* Long-press to speed up playback 
-* Set a sleep timer for bedtime listening 
+* Optimized for R18 platforms (web scraping + PipePipe's powerful engine)
+* Built-in ad blocking
+* Background playback support
+* Open source (GPL-3.0)
+* Manage videos from multiple services in a single unified playlist
 
-#### Enhanced Playlists
-* Download full playlists at once 
-* Search and sort within local playlists and histories
+## Installation
 
-... and many more improvements!
+1. Download the latest APK from the [Releases](https://github.com/Kdroidwin/MISSPipe/releases) page.
+2. Or build the project yourself.
 
+**Note:** This app is not available on Google Play. Only download APKs from trusted sources.
 
 ## Screenshots
 
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/00-v2.png" width=640>](fastlane/metadata/android/en-US/images/phoneScreenshots/00-v1.png)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/da0557ec-e75c-4935-b37c-d482ead576b7" width="48%" />
+  <img src="https://github.com/user-attachments/assets/7acd430d-41ad-4c80-bb66-c91a3d4f15b3" width="48%" />
+</p>
 
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/01-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/02-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/03-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/04-v3.png)
-<br/>
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/05-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/06-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/07-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/07-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/08-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/08-v3.png)
-<br/>
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/09-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/09-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/10-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/10-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/11-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/11-v3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/12-v3.png" width=160>](fastlane/metadata/android/en-US/images/phoneScreenshots/12-v3.png)
+## Building
 
+```bash
+# Clone the repository
+git clone https://github.com/Kdroidwin/MISSPipe.git
+cd MISSPipe
 
-## About this fork
+# Prepare the PipePipe source (if necessary)
+cd PipePipe-main/PipePipe-main
+# Open it in Android Studio or build it from the command line
+```
 
-Due to differences in development philosophy, I forked NewPipe in early 2022 and began independent development based on it.
+For more details, refer to the documentation in the `PipePipe-main/PipePipe-main` directory.
+Main implementation: https://github.com/Kdroidwin/MISSPipe/tree/main/PipePipe-main/PipePipe-main/PipePipeExtractor/extractor/src/main/java/org/schabi/newpipe/extractor/services/missav
 
-This means that PipePipe neither receives updates from NewPipe nor pushes updates to NewPipe. They have become two separate projects. Issues that occur in NewPipe don't necessarily happen in PipePipe, and changes made in NewPipe may not be adopted by PipePipe. In contrast, forks like Tubular track the latest version of NewPipe and develop based on it.
+## Disclaimer
 
-Making a hard fork allows us to effectively address issues with quick fixes and maintain frequent feature updates.
+* This app is **unofficial**. Please use it responsibly and ensure your usage complies with the terms of service of the platforms you access.
+* This application is intended for adults only. Users must be at least 18 years old.
 
-## About sign in
+## Credits
 
-PipePipe will ONLY use the login cookie for the specified scenarios you set. You can configure it in "Cookie Functions."
+* [PipePipe](https://github.com/InfinityLoop1308/PipePipe) - The excellent YouTube/NicoNico client that serves as the foundation of this project
+* [unofficial-api-for-missav](https://github.com/EchterAlsFake/unofficial-api-for-missav) - MISSAV integration
 
-For YouTube, the cookie will only be used when retrieving playback streams.
+## Contributing
 
-## Contribute
+Pull requests are always welcome!
 
-Issues and PRs are welcomed. Please note that I will **NOT** accept service requests. 
-
-Anyone interested in creating their own service is encouraged to fork this repository.
-
-## Donation
-
-If you find PipePipe useful, please consider becoming a supporter on Ko-Fi. Your support is important to me and helps me add more exciting new features. Every bit counts! 😇
-
-Liberapay: https://liberapay.com/PipePipe
-
-Ko-fi: https://ko-fi.com/pipepipe
-
-## Community
-
-[PipePipe Wiki](https://priveetee.github.io/Docs-PipePipe) User wiki maintained by [@Priveetee](https://github.com/Priveetee)
-
-## Special Thanks
-
-[Priveetee](https://github.com/Priveetee) for [researching SABR](https://priveetee.github.io/Docs-PipePipe/developer-guide/introduction.html) and implementing support for it.
-
-[AioiLight](https://github.com/AioiLight) for providing some code of NicoNico service.
+---
