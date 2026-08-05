@@ -51,6 +51,8 @@ public final class ServiceHelper {
                 return R.drawable.place_holder_niconico;
             case 7:
                 return R.drawable.ic_movie;
+            case 8:
+                return R.drawable.ic_movie;
             default:
                 return R.drawable.place_holder_circle;
         }
@@ -269,6 +271,12 @@ public final class ServiceHelper {
             case "JAV-NONI":
             case "JAVSB":
             case "TOKYO Motion":
+            case "SpankBang":
+            case "xHamster":
+            case "XVideos":
+            case "EPORNER":
+            case "MRDOUGA":
+            case "OHentai":
                 return false;
             default:
                 return true;
@@ -322,7 +330,8 @@ public final class ServiceHelper {
         } else if (isActiveService(ServiceList.YouTube, serviceId)) {
             final SharedPreferences sharedPreferences = PreferenceManager
                     .getDefaultSharedPreferences(context);
-            final String tokens = sharedPreferences.getString(context.getString(
+            final SharedPreferences accountPreferences = SecurePreferences.youtubeAccount(context);
+            final String tokens = accountPreferences.getString(context.getString(
                     R.string.youtube_cookies_key), null);
             final String audioLanguage = sharedPreferences.getString(context.getString(
                     R.string.preferred_audio_language_key),"original");
@@ -334,7 +343,7 @@ public final class ServiceHelper {
             ServiceList.YouTube.setAudioLanguage(audioLanguage);
             ServiceList.YouTube.setShowAutoTranslatedSubtitles(showAutoTranslatedSubtitles);
             ServiceList.YouTube.setAutoTranslatedSubtitlesLanguage(autoTranslatedSubtitlesLanguage);
-            final String pot = sharedPreferences.getString(context.getString(R.string.youtube_po_token_key), null);
+            final String pot = accountPreferences.getString(context.getString(R.string.youtube_po_token_key), null);
             ServiceList.YouTube.setAdditionalTokens(pot);
 //            if(sharedPreferences.getBoolean(context.getString(R.string.override_cookies_youtube_key), false)) {
 //                ServiceList.YouTube.setTokens(sharedPreferences.getString(context.getString(R.string.override_cookies_youtube_value_key), null));

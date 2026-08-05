@@ -16,6 +16,7 @@ import org.schabi.newpipe.error.ReCaptchaActivity;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.local.history.HistoryRecordManager;
 import org.schabi.newpipe.util.InfoCache;
+import org.schabi.newpipe.util.SecurePreferences;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -42,7 +43,7 @@ public class HistorySettingsFragment extends BasePreferenceFragment {
 
         final Preference clearCookiePref = requirePreference(R.string.clear_cookie_key);
         clearCookiePref.setOnPreferenceClickListener(preference -> {
-            defaultPreferences.edit()
+            SecurePreferences.recaptcha(requireContext()).edit()
                     .putString(getString(R.string.recaptcha_cookies_key), "").apply();
             DownloaderImpl.getInstance().setCookie(ReCaptchaActivity.RECAPTCHA_COOKIES_KEY, "");
             Toast.makeText(getActivity(), R.string.recaptcha_cookies_cleared,
@@ -51,7 +52,8 @@ public class HistorySettingsFragment extends BasePreferenceFragment {
             return true;
         });
 
-        if (defaultPreferences.getString(getString(R.string.recaptcha_cookies_key), "").isEmpty()) {
+        if (SecurePreferences.recaptcha(requireContext()).getString(
+                getString(R.string.recaptcha_cookies_key), "").isEmpty()) {
             clearCookiePref.setEnabled(false);
         }
     }

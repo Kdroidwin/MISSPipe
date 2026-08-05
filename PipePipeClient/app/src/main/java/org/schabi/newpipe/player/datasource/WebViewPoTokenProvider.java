@@ -2,6 +2,7 @@ package org.schabi.newpipe.player.datasource;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -18,6 +19,7 @@ import org.json.JSONObject;
 import org.schabi.newpipe.extractor.services.youtube.sabr.SabrPoTokenProvider;
 import org.schabi.newpipe.extractor.services.youtube.sabr.YoutubeSabrInfo;
 import org.schabi.newpipe.extractor.services.youtube.sabr.YoutubeSabrStreamState;
+import org.schabi.newpipe.util.SecurePreferences;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -82,7 +84,7 @@ public final class WebViewPoTokenProvider implements SabrPoTokenProvider {
     public WebViewPoTokenProvider(final Context context) {
         this.appContext = context.getApplicationContext();
         this.mainHandler = new Handler(Looper.getMainLooper());
-        this.prefs = this.appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        this.prefs = SecurePreferences.open(this.appContext, PREFS);
     }
 
     @Nullable
@@ -233,6 +235,9 @@ public final class WebViewPoTokenProvider implements SabrPoTokenProvider {
         final WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setUserAgentString(DESKTOP_UA);
         webView.addJavascriptInterface(new Bridge(tokenRef, latch, canceled), "SabrPocBridge");
         webView.setWebViewClient(new WebViewClient() {
@@ -242,7 +247,8 @@ public final class WebViewPoTokenProvider implements SabrPoTokenProvider {
             public WebResourceResponse shouldInterceptRequest(final WebView view,
                                                               final WebResourceRequest request) {
                 final String url = request.getUrl().toString();
-                if (url.contains("/js/th/")) {
+                if (isTrustedYoutubeUrl(url) && request.getUrl().getPath() != null
+                        && request.getUrl().getPath().startsWith("/js/th/")) {
                     return fetchWithCors(url);
                 }
                 return super.shouldInterceptRequest(view, request);
@@ -251,7 +257,7 @@ public final class WebViewPoTokenProvider implements SabrPoTokenProvider {
             @Override
             public void onPageFinished(final WebView view, final String url) {
                 super.onPageFinished(view, url);
-                if (canceled.get() || injected || url == null || !url.contains("youtube.com")) {
+                if (canceled.get() || injected || !isTrustedYoutubeUrl(url)) {
                     return;
                 }
                 injected = true;
@@ -290,12 +296,24 @@ public final class WebViewPoTokenProvider implements SabrPoTokenProvider {
         }
         try {
             webView.stopLoading();
+            webView.removeJavascriptInterface("SabrPocBridge");
             webView.loadUrl("about:blank");
             webView.removeAllViews();
             webView.destroy();
         } catch (final Exception ignored) {
             // best effort
         }
+    }
+
+    private static boolean isTrustedYoutubeUrl(@Nullable final String value) {
+        if (value == null) {
+            return false;
+        }
+        final Uri uri = Uri.parse(value);
+        final String host = uri.getHost();
+        return "https".equalsIgnoreCase(uri.getScheme())
+                && ("youtube.com".equalsIgnoreCase(host)
+                || "www.youtube.com".equalsIgnoreCase(host));
     }
 
     private static String jsString(final String value) {

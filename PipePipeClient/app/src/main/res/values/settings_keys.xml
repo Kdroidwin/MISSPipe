@@ -11,6 +11,12 @@
         <item>@string/pornhub</item>
         <item>@string/javnoni</item>
         <item>@string/tokyomotion</item>
+        <item>@string/spankbang</item>
+        <item>@string/xhamster</item>
+        <item>@string/xvideos</item>
+        <item>@string/eporner</item>
+        <item>@string/mrdouga</item>
+        <item>@string/ohentai</item>
     </string-array>
     <string name="current_service_key">service</string>
     <string name="default_service_value">@string/missav</string>

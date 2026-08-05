@@ -6,6 +6,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
+import org.schabi.newpipe.util.SecurePreferences;
 import org.schabi.newpipe.views.YouTubeLoginWebViewActivity;
 
 public class YouTubeAccountSettingsFragment extends BaseAccountSettingsFragment {
@@ -57,7 +58,7 @@ public class YouTubeAccountSettingsFragment extends BaseAccountSettingsFragment 
 
         try {
             YoutubeParsingHelper.getAuthorizationHeader(cookies);
-            defaultPreferences.edit()
+            SecurePreferences.youtubeAccount(requireContext()).edit()
                     .putString(getCookiesKey(), cookies)
                     .putString(getString(R.string.youtube_po_token_key), pot)
                     .apply();
@@ -69,9 +70,17 @@ public class YouTubeAccountSettingsFragment extends BaseAccountSettingsFragment 
 
     @Override
     protected void performLogout() {
-        defaultPreferences.edit().putString(getCookiesKey(), "").apply();
-        defaultPreferences.edit().putString(getString(R.string.youtube_po_token_key), "").apply();
+        SecurePreferences.youtubeAccount(requireContext()).edit()
+                .putString(getCookiesKey(), "")
+                .putString(getString(R.string.youtube_po_token_key), "")
+                .apply();
         onLogoutSuccess();
+    }
+
+    @Override
+    protected boolean hasStoredCredentials() {
+        return !SecurePreferences.youtubeAccount(requireContext())
+                .getString(getCookiesKey(), "").isEmpty();
     }
 
     @Override

@@ -350,14 +350,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void changeService(final MenuItem item) {
-        drawerLayoutBinding.navigation.getMenu()
-                .getItem(ServiceHelper.getSelectedServiceId(this))
-                .setChecked(false);
+        final MenuItem previousService = drawerLayoutBinding.navigation.getMenu()
+                .findItem(ServiceHelper.getSelectedServiceId(this));
+        if (previousService != null) {
+            previousService.setChecked(false);
+        }
         ServiceHelper.setSelectedServiceId(this, item.getItemId());
         SearchFragment.setPersistedSearchServiceId(this, item.getItemId());
-        drawerLayoutBinding.navigation.getMenu()
-                .getItem(ServiceHelper.getSelectedServiceId(this))
-                .setChecked(true);
+        final MenuItem selectedService = drawerLayoutBinding.navigation.getMenu()
+                .findItem(ServiceHelper.getSelectedServiceId(this));
+        if (selectedService != null) {
+            selectedService.setChecked(true);
+        }
     }
 
     private void tabSelected(final MenuItem item) throws ExtractionException {
@@ -462,9 +466,11 @@ public class MainActivity extends AppCompatActivity {
                 enhancePeertubeMenu(s, menuItem);
             }
         }
-        drawerLayoutBinding.navigation.getMenu()
-                .getItem(ServiceHelper.getSelectedServiceId(this))
-                .setChecked(true);
+        final MenuItem selectedService = drawerLayoutBinding.navigation.getMenu()
+                .findItem(ServiceHelper.getSelectedServiceId(this));
+        if (selectedService != null) {
+            selectedService.setChecked(true);
+        }
     }
 
     private void enhancePeertubeMenu(final StreamingService s, final MenuItem menuItem) {

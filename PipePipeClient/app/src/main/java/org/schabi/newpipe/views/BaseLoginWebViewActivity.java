@@ -2,7 +2,9 @@ package org.schabi.newpipe.views;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.net.Uri;
 import android.webkit.CookieManager;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,6 +20,10 @@ public abstract class BaseLoginWebViewActivity extends AppCompatActivity {
         setContentView(R.layout.login_webview);
 
         webView = findViewById(R.id.login_webview);
+        final WebSettings settings = webView.getSettings();
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         configureWebView();
         webView.setWebViewClient(createWebViewClient());
         loadLoginUrl();
@@ -59,6 +65,10 @@ public abstract class BaseLoginWebViewActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            final String scheme = Uri.parse(url).getScheme();
+            if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) {
+                return true;
+            }
             view.loadUrl(url);
             return true;
         }

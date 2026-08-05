@@ -172,7 +172,7 @@ public final class DownloaderImpl extends Downloader {
                     .cipherSuites(cipherSuites.toArray(new CipherSuite[0]))
                     .build();
 
-            builder.connectionSpecs(Arrays.asList(legacyTLS, ConnectionSpec.CLEARTEXT));
+            builder.connectionSpecs(Collections.singletonList(legacyTLS));
         } catch (final KeyManagementException | NoSuchAlgorithmException | KeyStoreException e) {
             if (DEBUG) {
                 e.printStackTrace();

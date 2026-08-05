@@ -73,6 +73,17 @@ public final class ZipHelper {
      */
     public static boolean extractFileFromZip(final StoredFileHelper zipFile, final String file,
                                              final String name) throws Exception {
+        return extractFileFromZip(zipFile, file, name, Long.MAX_VALUE);
+    }
+
+    /**
+     * Extracts one named entry while enforcing a limit on its uncompressed size.
+     */
+    public static boolean extractFileFromZip(final StoredFileHelper zipFile, final String file,
+                                             final String name, final long maxBytes) throws Exception {
+        if (maxBytes < 0) {
+            throw new IllegalArgumentException("maxBytes must not be negative");
+        }
         try (ZipInputStream inZip = new ZipInputStream(new BufferedInputStream(
                 new SharpInputStream(zipFile.getStream())))) {
             final byte[] data = new byte[BUFFER_SIZE];
@@ -92,7 +103,12 @@ public final class ZipHelper {
 
                     try (FileOutputStream outFile = new FileOutputStream(file)) {
                         int count = 0;
+                        long extractedBytes = 0;
                         while ((count = inZip.read(data)) != -1) {
+                            extractedBytes += count;
+                            if (extractedBytes > maxBytes) {
+                                throw new IOException("Zip entry exceeds allowed size: " + name);
+                            }
                             outFile.write(data, 0, count);
                         }
                     }

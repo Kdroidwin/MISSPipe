@@ -21,8 +21,7 @@ public class CarConnectionStateReceiver extends BroadcastReceiver {
             boolean isConnected = (connectionState != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
 
             Log.d(TAG, "Android Auto connection state changed. Is connected: " + isConnected);
-            shutdownOldService(context); // shutdown old Service or phone and auto are interacting to different service
-            setCarConnectionState(isConnected);
+            updateCarConnectionState(context, isConnected);
         }
     }
 
@@ -32,10 +31,12 @@ public class CarConnectionStateReceiver extends BroadcastReceiver {
     }
 
     
-    public static void setCarConnectionState(boolean connected) {
-        if (isCarConnected != connected) {
-            isCarConnected = connected;
+    public static void updateCarConnectionState(final Context context, final boolean connected) {
+        if (isCarConnected == connected) {
+            return;
         }
+        isCarConnected = connected;
+        shutdownOldService(context);
     }
 
     private static void shutdownOldService(Context context) {

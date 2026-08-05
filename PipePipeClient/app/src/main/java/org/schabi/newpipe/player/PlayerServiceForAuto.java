@@ -22,9 +22,12 @@ package org.schabi.newpipe.player;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Process;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
@@ -49,6 +52,7 @@ import org.schabi.newpipe.util.DeviceUtils;
 import org.schabi.newpipe.util.ThemeHelper;
 
 import java.util.List;
+import java.util.Arrays;
 
 import static org.schabi.newpipe.player.PlayerService.BIND_PLAYER_HOLDER_ACTION;
 import static org.schabi.newpipe.util.Localization.assureCorrectAppLanguage;
@@ -62,6 +66,7 @@ import static org.schabi.newpipe.util.Localization.assureCorrectAppLanguage;
 public final class PlayerServiceForAuto extends MediaBrowserServiceCompat implements PlayerServiceInterface {
     private static final String TAG = "PlayerServiceForAuto";
     private static final boolean DEBUG = Player.DEBUG;
+    private static final String ANDROID_AUTO_PACKAGE = "com.google.android.projection.gearhead";
 
     // These objects are used to cleanly separate the Service implementation (in this file) and the
     // media browser and playback preparer implementations. At the moment the playback preparer is
@@ -269,6 +274,9 @@ public final class PlayerServiceForAuto extends MediaBrowserServiceCompat implem
     @Override
     public IBinder onBind(final Intent intent) {
         if (BIND_PLAYER_HOLDER_ACTION.equals(intent.getAction())) {
+            if (Binder.getCallingUid() != Process.myUid()) {
+                return null;
+            }
             // Note that this binder might be reused multiple times while the service is alive, even
             // after unbind() has been called: https://stackoverflow.com/a/8794930 .
             return mBinder;
@@ -360,8 +368,33 @@ public final class PlayerServiceForAuto extends MediaBrowserServiceCompat implem
     public BrowserRoot onGetRoot(@NonNull final String clientPackageName,
                                  final int clientUid,
                                  @Nullable final Bundle rootHints) {
-        // TODO check if the accessing package has permission to view data
+        if (!isTrustedMediaBrowserClient(clientPackageName, clientUid)) {
+            Log.w(TAG, "Rejected untrusted media browser client");
+            return null;
+        }
         return mediaBrowserImpl.onGetRoot(clientPackageName, clientUid, rootHints);
+    }
+
+    private boolean isTrustedMediaBrowserClient(@NonNull final String packageName,
+                                                final int uid) {
+        if (uid == Process.myUid()) {
+            return getPackageName().equals(packageName);
+        }
+        if (!ANDROID_AUTO_PACKAGE.equals(packageName)) {
+            return false;
+        }
+        final String[] packages = getPackageManager().getPackagesForUid(uid);
+        if (packages == null || !Arrays.asList(packages).contains(packageName)) {
+            return false;
+        }
+        try {
+            final ApplicationInfo info = getPackageManager().getApplicationInfo(packageName, 0);
+            final int trustedFlags = ApplicationInfo.FLAG_SYSTEM
+                    | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP;
+            return (info.flags & trustedFlags) != 0;
+        } catch (final PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
 
     @Override

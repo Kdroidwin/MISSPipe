@@ -82,6 +82,18 @@ public class PlayerDataSource {
                     + "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
     private static final String TOKYOMOTION_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0";
+    private static final String SPANKBANG_USER_AGENT =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36";
+    private static final String EPORNER_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final String MRDOUGA_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final String OHENTAI_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
 
     /**
      * An approximately 4.3 times greater value than the
@@ -378,6 +390,116 @@ public class PlayerDataSource {
         return new ProgressiveMediaSource.Factory(upstreamFactory,
                 new DefaultExtractorsFactory().setMp4ExtractorFlags(
                         Mp4Extractor.FLAG_WORKAROUND_IGNORE_EDIT_LISTS))
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public HlsMediaSource.Factory getSpankBangHlsMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        return new HlsMediaSource.Factory(spankBangDataSourceFactory(pageReferer))
+                .setAllowChunklessPreparation(true);
+    }
+
+    public ProgressiveMediaSource.Factory getSpankBangProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        return new ProgressiveMediaSource.Factory(spankBangDataSourceFactory(pageReferer))
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    private DataSource.Factory spankBangDataSourceFactory(@Nullable final String pageReferer) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://www.spankbang.com/" : pageReferer;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer,
+                "Origin", "https://www.spankbang.com",
+                "Accept", "*/*",
+                "Accept-Language", "en-US,en;q=0.9",
+                "Cookie", "age_pass=1; pg_interstitial_v5=1; pg_pop_v5=1; player_quality=1080; "
+                        + "preroll_skip=1; backend_version=main; videos_layout=four-col");
+        return new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(SPANKBANG_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+    }
+
+    public ProgressiveMediaSource.Factory getEpornerProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer, @Nullable final String sessionCookie) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://www.eporner.com/" : pageReferer;
+        final Map<String, String> headers = new HashMap<>();
+        headers.put("Referer", referer);
+        headers.put("Origin", "https://www.eporner.com");
+        headers.put("Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5");
+        headers.put("Accept-Encoding", "identity");
+        headers.put("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7");
+        if (sessionCookie != null && !sessionCookie.isEmpty()) {
+            headers.put("Cookie", sessionCookie);
+        }
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(EPORNER_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getMrDougaProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = mrDougaHeaderReferer(pageReferer);
+        final Map<String, String> headers = Map.of(
+                "Referer", referer,
+                "Origin", "https://mrdouga.com",
+                "Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                "Accept-Encoding", "identity",
+                "Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(MRDOUGA_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    @NonNull
+    private static String mrDougaHeaderReferer(@Nullable final String pageReferer) {
+        if (pageReferer == null || pageReferer.isEmpty()) {
+            return "https://mrdouga.com/";
+        }
+        try {
+            final URI uri = URI.create(pageReferer);
+            if (("https".equalsIgnoreCase(uri.getScheme())
+                    || "http".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null
+                    && (uri.getHost().equalsIgnoreCase("mrdouga.com")
+                    || uri.getHost().endsWith(".mrdouga.com"))) {
+                return uri.toASCIIString();
+            }
+        } catch (final IllegalArgumentException ignored) {
+            // The trusted MRDOUGA root below is a safe fallback for malformed page URLs.
+        }
+        return "https://mrdouga.com/";
+    }
+
+    public ProgressiveMediaSource.Factory getOhentaiProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://ohentai.org/" : pageReferer;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer,
+                "Origin", "https://ohentai.org",
+                "Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                "Accept-Encoding", "identity",
+                "Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"
+        );
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(OHENTAI_USER_AGENT)
+                        .setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
     }
 

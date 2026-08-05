@@ -6,6 +6,12 @@ import org.schabi.newpipe.extractor.services.eightyfivepo.EightyFivePoService;
 import org.schabi.newpipe.extractor.services.javnoni.JavNoniService;
 import org.schabi.newpipe.extractor.services.javsb.JavSbService;
 import org.schabi.newpipe.extractor.services.tokyomotion.TokyoMotionService;
+import org.schabi.newpipe.extractor.services.spankbang.SpankBangService;
+import org.schabi.newpipe.extractor.services.xhamster.XHamsterService;
+import org.schabi.newpipe.extractor.services.xvideos.XVideosService;
+import org.schabi.newpipe.extractor.services.eporner.EpornerService;
+import org.schabi.newpipe.extractor.services.mrdouga.MrDougaService;
+import org.schabi.newpipe.extractor.services.ohentai.OhentaiService;
 import org.schabi.newpipe.extractor.services.kissjav.KissJavService;
 import org.schabi.newpipe.extractor.services.media_ccc.MediaCCCService;
 import org.schabi.newpipe.extractor.services.missav.MissAvService;
@@ -59,6 +65,12 @@ public final class ServiceList {
     public static final JavNoniService JavNoni = new JavNoniService(4);
     public static final JavSbService JavSB = new JavSbService(5);
     public static final TokyoMotionService TokyoMotion = new TokyoMotionService(6);
+    public static final SpankBangService SpankBang = new SpankBangService(8);
+    public static final XHamsterService XHamster = new XHamsterService(9);
+    public static final XVideosService XVideos = new XVideosService(10);
+    public static final EpornerService Eporner = new EpornerService(11);
+    public static final MrDougaService MrDouga = new MrDougaService(12);
+    public static final OhentaiService Ohentai = new OhentaiService(13);
     /**
      * When creating a new service, put this service in the end of this list,
      * and give it the next free id.
@@ -67,7 +79,8 @@ public final class ServiceList {
      * client still contains service-specific branches that will be removed incrementally.
      */
     private static final List<StreamingService> SERVICES = Collections.unmodifiableList(
-            java.util.Arrays.asList(MissAV, KissJAV, EightyFivePo, Pornhub, JavNoni, JavSB, TokyoMotion));
+            java.util.Arrays.asList(MissAV, KissJAV, EightyFivePo, Pornhub, JavNoni, JavSB, TokyoMotion,
+                    SpankBang, XHamster, XVideos, Eporner, MrDouga, Ohentai));
 
     /**
      * Get all the supported services.

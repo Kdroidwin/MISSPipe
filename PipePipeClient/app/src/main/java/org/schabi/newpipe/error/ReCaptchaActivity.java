@@ -17,7 +17,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
-import androidx.preference.PreferenceManager;
 import androidx.webkit.WebViewClientCompat;
 
 import org.schabi.newpipe.databinding.ActivityRecaptchaBinding;
@@ -25,6 +24,7 @@ import org.schabi.newpipe.DownloaderImpl;
 import org.schabi.newpipe.MainActivity;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.util.ThemeHelper;
+import org.schabi.newpipe.util.SecurePreferences;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -151,8 +151,7 @@ public class ReCaptchaActivity extends AppCompatActivity {
 
         if (!foundCookies.isEmpty()) {
             // save cookies to preferences
-            final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(
-                    getApplicationContext());
+            final SharedPreferences prefs = SecurePreferences.recaptcha(getApplicationContext());
             final String key = getApplicationContext().getString(R.string.recaptcha_cookies_key);
             prefs.edit().putString(key, foundCookies).apply();
 

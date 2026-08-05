@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="recaptcha_session.xml" />
+    <exclude domain="sharedpref" path="sabr_potoken_cache.xml" />
+    <exclude domain="sharedpref" path="youtube_account.xml" />
+</full-backup-content>

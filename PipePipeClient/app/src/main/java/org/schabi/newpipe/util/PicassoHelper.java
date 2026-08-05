@@ -217,8 +217,36 @@ public final class PicassoHelper {
     private static Response addSiteImageHeaders(final Interceptor.Chain chain) throws IOException {
         final Request request = chain.request();
         final String host = request.url().host().toLowerCase(java.util.Locale.ROOT);
-        if (!isPornhubImageHost(host)) {
+        if (!isPornhubImageHost(host) && !isXVideosImageHost(host) && !isEpornerImageHost(host)
+                && !isMrDougaImageHost(host)) {
             return chain.proceed(request);
+        }
+
+        if (isXVideosImageHost(host)) {
+            return chain.proceed(request.newBuilder()
+                    .header("User-Agent", DownloaderImpl.USER_AGENT)
+                    .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+                    .header("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Referer", "https://www.xvideos.com/")
+                    .build());
+        }
+
+        if (isEpornerImageHost(host)) {
+            return chain.proceed(request.newBuilder()
+                    .header("User-Agent", DownloaderImpl.USER_AGENT)
+                    .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+                    .header("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Referer", "https://www.eporner.com/")
+                    .build());
+        }
+
+        if (isMrDougaImageHost(host)) {
+            return chain.proceed(request.newBuilder()
+                    .header("User-Agent", DownloaderImpl.USER_AGENT)
+                    .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+                    .header("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Referer", "https://mrdouga.com/")
+                    .build());
         }
 
         final Request.Builder builder = request.newBuilder()
@@ -239,5 +267,18 @@ public final class PicassoHelper {
                 || host.startsWith("pix-")
                 || host.startsWith("ci.phncdn.")
                 || host.startsWith("ei.phncdn.");
+    }
+
+    private static boolean isXVideosImageHost(final String host) {
+        return host.equals("xvideos-cdn.com") || host.endsWith(".xvideos-cdn.com");
+    }
+
+    private static boolean isEpornerImageHost(final String host) {
+        return host.equals("eporner.com") || host.endsWith(".eporner.com");
+    }
+
+    private static boolean isMrDougaImageHost(final String host) {
+        return host.equals("mrdouga.com") || host.endsWith(".mrdouga.com")
+                || host.equals("cdnhop.com") || host.endsWith(".cdnhop.com");
     }
 }

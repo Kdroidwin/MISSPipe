@@ -192,6 +192,21 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         } else if (ServiceList.TokyoMotion.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
             return buildTokyoMotionProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.SpankBang.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.HLS) {
+            return buildSpankBangHlsMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.SpankBang.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildSpankBangProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Eporner.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildEpornerProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.MrDouga.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildMrDougaProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Ohentai.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildOhentaiProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
         }
 
         final DeliveryMethod deliveryMethod = stream.getDeliveryMethod();
@@ -349,6 +364,92 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
                         .setUri(Uri.parse(stripStreamMarker(url, "#tokyomotion=1")))
                         .setCustomCacheKey(cacheKey)
                         .build());
+    }
+
+    @NonNull
+    private static <T extends Stream> HlsMediaSource buildSpankBangHlsMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate a SpankBang HLS media source from an empty URL");
+        }
+        return dataSource.getSpankBangHlsMediaSourceFactory(
+                extractPageReferer(url, "#spankbang=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#spankbang=1")))
+                        .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildSpankBangProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate a SpankBang progressive media source from an empty URL");
+        }
+        return dataSource.getSpankBangProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#spankbang=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#spankbang=1")))
+                .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildEpornerProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate an EPORNER progressive media source from an empty URL");
+        }
+        return dataSource.getEpornerProgressiveMediaSourceFactory(
+                extractStreamParameter(url, "ref"),
+                extractStreamParameter(url, "cookie")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#eporner=1")))
+                        .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildMrDougaProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate a MRDOUGA progressive media source from an empty URL");
+        }
+        return dataSource.getMrDougaProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#mrdouga=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#mrdouga=1")))
+                        .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildOhentaiProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource,
+            @NonNull final T stream,
+            @NonNull final String cacheKey,
+            @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) {
+            throw new IOException("Try to generate an OHentai progressive media source from an empty URL");
+        }
+        return dataSource.getOhentaiProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#ohentai=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#ohentai=1")))
+                        .setCustomCacheKey(cacheKey).build());
     }
 
     @NonNull
@@ -902,6 +1003,18 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         }
         final String encodedReferer = url.substring(markerIndex + marker.length());
         return encodedReferer.isEmpty() ? null : Uri.decode(encodedReferer);
+    }
+
+    @Nullable
+    private static String extractStreamParameter(@NonNull final String url,
+                                                 @NonNull final String parameter) {
+        final String fragment = Uri.parse(url).getFragment();
+        if (fragment == null || fragment.isEmpty()) return null;
+        final String prefix = parameter + "=";
+        for (final String part : fragment.split("&")) {
+            if (part.startsWith(prefix)) return Uri.decode(part.substring(prefix.length()));
+        }
+        return null;
     }
 
     @NonNull

@@ -64,8 +64,6 @@ public class App extends MultiDexApplication {
     private static final String TAG = App.class.toString();
     private static App app;
 
-    private CarConnectionStateReceiver carConnectionReceiver;
-
     @NonNull
     public static App getApp() {
         return app;
@@ -91,15 +89,13 @@ public class App extends MultiDexApplication {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            registerCarConnectionReceiver();
             CarConnection carConnection = new CarConnection(this);
             carConnection.getType().observeForever(new androidx.lifecycle.Observer<Integer>() {
                 @Override
                 public void onChanged(Integer connectionState) {
                     boolean isConnected = (connectionState != null && connectionState != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
                     Log.d(TAG, "Initial check: Is car connected? " + isConnected);
-                    CarConnectionStateReceiver.setCarConnectionState(isConnected);
-                    carConnection.getType().removeObserver(this);
+                    CarConnectionStateReceiver.updateCarConnectionState(App.this, isConnected);
                 }
             });
         }
@@ -140,25 +136,6 @@ public class App extends MultiDexApplication {
     public void onTerminate() {
         super.onTerminate();
         PicassoHelper.terminate();
-        if (carConnectionReceiver != null) {
-            unregisterReceiver(carConnectionReceiver);
-        }
-    }
-
-    private void registerCarConnectionReceiver() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            carConnectionReceiver = new CarConnectionStateReceiver();
-            IntentFilter filter = new IntentFilter(
-                    "androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"
-            );
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+ requires explicit export flag
-                registerReceiver(carConnectionReceiver, filter, Context.RECEIVER_EXPORTED);
-            } else {
-                registerReceiver(carConnectionReceiver, filter);
-            }
-            Log.d("CarConnectionReceiver", "Receiver registered dynamically");
-        }
     }
 
 
@@ -171,8 +148,7 @@ public class App extends MultiDexApplication {
     }
 
     protected void setCookiesToDownloader(final DownloaderImpl downloader) {
-        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(
-                getApplicationContext());
+        final SharedPreferences prefs = SecurePreferences.recaptcha(getApplicationContext());
         final String key = getApplicationContext().getString(R.string.recaptcha_cookies_key);
         downloader.setCookie(ReCaptchaActivity.RECAPTCHA_COOKIES_KEY, prefs.getString(key, null));
         downloader.updateYoutubeRestrictedModeCookies(getApplicationContext());
