@@ -217,7 +217,7 @@ public final class PicassoHelper {
     private static Response addSiteImageHeaders(final Interceptor.Chain chain) throws IOException {
         final Request request = chain.request();
         final String host = request.url().host().toLowerCase(java.util.Locale.ROOT);
-        if (!isPornhubImageHost(host) && !isXVideosImageHost(host) && !isEpornerImageHost(host)
+        if (!isPornhubImageHost(host) && !isXVideosImageHost(host) && !isXnxxImageHost(host) && !isEpornerImageHost(host)
                 && !isMrDougaImageHost(host)) {
             return chain.proceed(request);
         }
@@ -228,6 +228,15 @@ public final class PicassoHelper {
                     .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
                     .header("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")
                     .header("Referer", "https://www.xvideos.com/")
+                    .build());
+        }
+
+        if (isXnxxImageHost(host)) {
+            return chain.proceed(request.newBuilder()
+                    .header("User-Agent", DownloaderImpl.USER_AGENT)
+                    .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+                    .header("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")
+                    .header("Referer", "https://www.xnxx.com/")
                     .build());
         }
 
@@ -271,6 +280,10 @@ public final class PicassoHelper {
 
     private static boolean isXVideosImageHost(final String host) {
         return host.equals("xvideos-cdn.com") || host.endsWith(".xvideos-cdn.com");
+    }
+
+    private static boolean isXnxxImageHost(final String host) {
+        return host.equals("xnxx-cdn.com") || host.endsWith(".xnxx-cdn.com");
     }
 
     private static boolean isEpornerImageHost(final String host) {

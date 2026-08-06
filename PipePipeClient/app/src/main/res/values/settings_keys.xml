@@ -17,6 +17,7 @@
         <item>@string/eporner</item>
         <item>@string/mrdouga</item>
         <item>@string/ohentai</item>
+        <item>@string/xnxx</item>
     </string-array>
     <string name="current_service_key">service</string>
     <string name="default_service_value">@string/missav</string>

@@ -283,6 +283,8 @@
                 <data android:host="www.mrdouga.com" />
                 <data android:host="ohentai.org" />
                 <data android:host="www.ohentai.org" />
+                <data android:host="xnxx.com" />
+                <data android:host="www.xnxx.com" />
                 <data android:pathPrefix="/" />
             </intent-filter>
 
@@ -323,6 +325,8 @@
                 <data android:host="www.mrdouga.com" />
                 <data android:host="ohentai.org" />
                 <data android:host="www.ohentai.org" />
+                <data android:host="xnxx.com" />
+                <data android:host="www.xnxx.com" />
                 <data android:pathPrefix="/" />
             </intent-filter>
 

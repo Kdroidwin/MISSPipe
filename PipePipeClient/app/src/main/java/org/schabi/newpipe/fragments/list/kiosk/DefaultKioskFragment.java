@@ -5,12 +5,15 @@ import android.os.Bundle;
 import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
+import org.schabi.newpipe.extractor.linkhandler.ListLinkHandlerFactory;
 import org.schabi.newpipe.util.KioskTranslator;
 import org.schabi.newpipe.util.ServiceHelper;
 
 public class DefaultKioskFragment extends KioskFragment {
+    private int selectedServiceId = -1;
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -25,7 +28,7 @@ public class DefaultKioskFragment extends KioskFragment {
     public void onResume() {
         super.onResume();
 
-        if (serviceId != ServiceHelper.getSelectedServiceId(requireContext())) {
+        if (selectedServiceId != ServiceHelper.getSelectedServiceId(requireContext())) {
             if (currentWorker != null) {
                 currentWorker.dispose();
             }
@@ -36,11 +39,30 @@ public class DefaultKioskFragment extends KioskFragment {
 
     private void updateSelectedDefaultKiosk() {
         try {
-            serviceId = ServiceHelper.getSelectedServiceId(requireContext());
+            selectedServiceId = ServiceHelper.getSelectedServiceId(requireContext());
+            serviceId = selectedServiceId;
 
-            final KioskList kioskList = NewPipe.getService(serviceId).getKioskList();
+            KioskList kioskList = NewPipe.getService(serviceId).getKioskList();
             kioskId = kioskList.getDefaultKioskId();
-            url = kioskList.getListLinkHandlerFactoryByType(kioskId).fromId(kioskId).getUrl();
+            if (kioskId == null && !kioskList.getAvailableKiosks().isEmpty()) {
+                kioskId = kioskList.getAvailableKiosks().iterator().next();
+            }
+
+            if (kioskId == null) {
+                // Some source-only services intentionally have no home feed. A restored front-page
+                // tab must still be renderable, so use the app's established default home source.
+                serviceId = ServiceList.MissAV.getServiceId();
+                kioskList = NewPipe.getService(serviceId).getKioskList();
+                kioskId = kioskList.getDefaultKioskId();
+            }
+
+            if (kioskId == null) {
+                throw new ExtractionException("No default kiosk is available");
+            }
+
+            final ListLinkHandlerFactory handlerFactory =
+                    kioskList.getListLinkHandlerFactoryByType(kioskId);
+            url = handlerFactory.fromId(kioskId).getUrl();
 
             kioskTranslatedName = KioskTranslator.getTranslatedKioskName(kioskId, requireContext());
             name = kioskTranslatedName;

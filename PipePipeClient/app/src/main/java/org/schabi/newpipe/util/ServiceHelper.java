@@ -277,6 +277,7 @@ public final class ServiceHelper {
             case "EPORNER":
             case "MRDOUGA":
             case "OHentai":
+            case "XNXX":
                 return false;
             default:
                 return true;

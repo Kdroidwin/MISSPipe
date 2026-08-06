@@ -29,6 +29,11 @@ public final class KioskTranslator {
     private KioskTranslator() { }
 
     public static String getTranslatedKioskName(final String kioskId, final Context c) {
+        // Some services deliberately do not expose a kiosk. Existing tab settings can
+        // still reference their default kiosk, so never let a missing id crash startup.
+        if (kioskId == null || kioskId.trim().isEmpty()) {
+            return c.getString(R.string.latest);
+        }
         switch (kioskId) {
             case "latest":
                 return c.getString(R.string.latest);
@@ -72,6 +77,9 @@ public final class KioskTranslator {
     }
 
     public static int getKioskIcon(final String kioskId) {
+        if (kioskId == null || kioskId.trim().isEmpty()) {
+            return R.drawable.ic_add_circle_outline;
+        }
         switch (kioskId) {
             case "latest":
                 return R.drawable.ic_add_circle_outline;
