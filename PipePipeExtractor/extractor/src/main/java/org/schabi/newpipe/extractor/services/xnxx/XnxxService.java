@@ -22,6 +22,7 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
+import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
@@ -74,7 +75,18 @@ public final class XnxxService extends StreamingService {
     @Override public SearchExtractor getSearchExtractor(final SearchQueryHandler handler) { return new XnxxSearchExtractor(this, handler); }
     @Override public SuggestionExtractor getSuggestionExtractor() { return null; }
     @Override public SubscriptionExtractor getSubscriptionExtractor() { return null; }
-    @Override public KioskList getKioskList() { return new KioskList(this); }
+    @Override public KioskList getKioskList() throws ExtractionException {
+        final KioskList kiosks = new KioskList(this);
+        try {
+            kiosks.addKioskEntry((service, url, kioskId) -> new XnxxKioskExtractor(
+                            service, XnxxKioskLinkHandlerFactory.INSTANCE.fromId(kioskId), kioskId),
+                    XnxxKioskLinkHandlerFactory.INSTANCE, "latest");
+            kiosks.setDefaultKiosk("latest");
+            return kiosks;
+        } catch (final Exception e) {
+            throw new ExtractionException("Could not initialize XNXX kiosks", e);
+        }
+    }
     @Override public ChannelExtractor getChannelExtractor(final ListLinkHandler handler) { return null; }
     @Override public ChannelTabExtractor getChannelTabExtractor(final ListLinkHandler handler) throws ExtractionException { throw new ExtractionException("XNXX channel tabs unavailable"); }
     @Override public PlaylistExtractor getPlaylistExtractor(final ListLinkHandler handler) throws ExtractionException { throw new ExtractionException("XNXX playlists unavailable"); }
@@ -115,6 +127,37 @@ final class XnxxSearchExtractor extends SearchExtractor {
         for (final XnxxItem item : XnxxParser.cards(XnxxParser.fetch(url), 48)) collector.commit(new XnxxItemExtractor(item));
         return new ListExtractor.InfoItemsPage<>(collector,
                 collector.getItems().isEmpty() ? null : new Page(String.valueOf(number + 1)));
+    }
+}
+
+final class XnxxKioskLinkHandlerFactory extends ListLinkHandlerFactory {
+    static final XnxxKioskLinkHandlerFactory INSTANCE = new XnxxKioskLinkHandlerFactory();
+    @Override public String getId(final String url) { return "latest"; }
+    @Override public String getUrl(final String id, final List<FilterItem> content,
+                                   final List<FilterItem> sort) { return XnxxParser.BASE + "/best/"; }
+    @Override public boolean onAcceptUrl(final String url) {
+        return url != null && url.startsWith(XnxxParser.BASE);
+    }
+}
+
+final class XnxxKioskExtractor extends KioskExtractor<org.schabi.newpipe.extractor.stream.StreamInfoItem> {
+    private Document document;
+    XnxxKioskExtractor(final StreamingService service, final ListLinkHandler handler,
+                       final String kioskId) { super(service, handler, kioskId); }
+    @Override public void onFetchPage(@Nonnull final Downloader downloader)
+            throws IOException, ExtractionException { document = XnxxParser.fetch(getUrl()); }
+    @Nonnull @Override public String getName() { return "Latest"; }
+    @Nonnull @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getInitialPage()
+            throws ExtractionException {
+        if (document == null) throw new ParsingException("XNXX kiosk page was not fetched");
+        final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
+        for (final XnxxItem item : XnxxParser.cards(document, 48)) {
+            collector.commit(new XnxxItemExtractor(item));
+        }
+        return new InfoItemsPage<>(collector, null);
+    }
+    @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getPage(final Page page) {
+        return InfoItemsPage.emptyPage();
     }
 }
 
@@ -185,18 +228,29 @@ final class XnxxParser {
     static List<XnxxItem> cards(final Element scope, final int maximum) {
         if (scope == null) return Collections.emptyList();
         final LinkedHashMap<String, XnxxItem> items = new LinkedHashMap<>();
-        for (final Element card : scope.select("div[id^=video_]")) {
-            final Element link = card.selectFirst(".thumb-under p a[href]");
+        for (final Element card : scope.select("div")) {
+            // Current XNXX cards place the uploader link before the video title. Resolve the
+            // video path explicitly so card-wrapper changes and uploader URLs do not affect results.
+            Element link = null;
+            for (final Element candidate : card.select("a[href]")) {
+                if (!candidate.attr("href").contains("/video-")) continue;
+                if (link == null) link = candidate;
+                if (!candidate.attr("title").trim().isEmpty() || !candidate.text().trim().isEmpty()) {
+                    link = candidate;
+                    break;
+                }
+            }
             if (link == null) continue;
             // The downloader response does not always retain a base URI. XNXX cards use relative URLs,
             // so resolving the raw attribute keeps search independent from that response detail.
             final String url = normalize(link.attr("href")); final String id = idOrEmpty(url);
             if (id.isEmpty() || items.containsKey(id)) continue;
-            final Element image = card.selectFirst(".thumb img");
+            final Element image = card.selectFirst(".thumb img, img[data-src], img[data-original], img[data-sfwthumb], img");
             final String title = first(link.attr("title"), link.text(), image == null ? "" : image.attr("alt"));
             if (title.isEmpty()) continue;
-            final String thumb = image == null ? "" : normalize(first(image.attr("data-src"), image.attr("src")));
-            final Element metadata = card.selectFirst(".metadata");
+            final String thumb = image == null ? "" : normalize(firstRaw(image.attr("data-src"),
+                    image.attr("data-original"), image.attr("data-sfwthumb"), image.attr("src")));
+            final Element metadata = card.selectFirst(".metadata, .thumb-under");
             items.put(id, new XnxxItem(id, url, title, thumb, metadata == null ? "" : metadata.text()));
             if (items.size() >= maximum) break;
         }
@@ -233,9 +287,7 @@ final class XnxxParser {
     }
     static String searchUrl(final String query, final int page) {
         final String path = BASE + "/search/" + encode(query);
-        // XNXX serves the initial result set through the explicit top variant.
-        // Subsequent pages are loaded from the numbered endpoint.
-        return page == 0 ? path + "?top" : path + "/" + page;
+        return page == 0 ? path : path + "/" + page;
     }
     static boolean isVideo(final String url) { return url != null && normalize(url).matches("https?://(?:www\\.)?xnxx\\.com/video-[a-z0-9]+(?:/.*)?"); }
     static String id(final String url) throws ParsingException { final Matcher matcher = ID.matcher(normalize(url)); if (matcher.find()) return matcher.group(1); throw new ParsingException("Could not extract XNXX id: " + url); }
@@ -275,5 +327,6 @@ final class XnxxParser {
     private static String encode(final String value) { try { return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8.name()); } catch (final Exception e) { throw new IllegalStateException("UTF-8 unavailable", e); } }
     private static String idOrEmpty(final String url) { try { return id(url); } catch (final ParsingException ignored) { return ""; } }
     private static String first(final String... values) { for (final String value : values) if (value != null && !value.trim().isEmpty()) return Jsoup.parse(value).text().replaceAll("\\s+", " ").trim(); return ""; }
+    private static String firstRaw(final String... values) { for (final String value : values) if (value != null && !value.trim().isEmpty()) return value.trim(); return ""; }
     private static Map<String, List<String>> headers() { final Map<String, List<String>> values = new HashMap<>(); values.put("User-Agent", Collections.singletonList("Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")); values.put("Referer", Collections.singletonList(BASE + "/")); values.put("Accept-Language", Collections.singletonList("ja-JP,ja;q=0.9,en-US;q=0.8")); return values; }
 }

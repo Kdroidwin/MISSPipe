@@ -20,6 +20,7 @@
         <item>@string/xnxx</item>
     </string-array>
     <string name="current_service_key">service</string>
+    <string name="current_service_id_key">service_id</string>
     <string name="default_service_value">@string/missav</string>
 
     <string name="saved_tabs_key">saved_tabs_key</string>

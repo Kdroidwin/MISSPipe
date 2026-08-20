@@ -2,6 +2,7 @@ package org.schabi.newpipe.extractor.services.pornhub;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 import org.schabi.newpipe.extractor.stream.DeliveryMethod;
@@ -10,6 +11,27 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 
 public class PornhubParsingHelperVideoSourceTest {
+    @Test
+    public void readsNestedMediaDefinitionsFromCurrentPlayerData() throws Exception {
+        final String html = "var flashvars_1 = {\"mediaDefinitions\":["
+                + "{\"format\":\"hls\",\"height\":720,\"videoUrl\":"
+                + "\"https:\\/\\/hv-h.phncdn.com\\/hls\\/video\\/720P.mp4\\/master.m3u8\","
+                + "\"segmentFormats\":{\"audio\":\"ts_aac\",\"video\":\"mpeg2_ts\"}}],"
+                + "\"isVertical\":\"false\"};";
+        final LinkedHashMap<String, PornhubVideoSource> sources = new LinkedHashMap<>();
+        final Method method = PornhubParsingHelper.class.getDeclaredMethod(
+                "putVideoSourcesFromHtml", LinkedHashMap.class, String.class);
+        method.setAccessible(true);
+
+        method.invoke(null, sources, html);
+
+        assertEquals(1, sources.size());
+        final PornhubVideoSource source = sources.values().iterator().next();
+        assertEquals(DeliveryMethod.HLS, source.deliveryMethod);
+        assertEquals("720p", source.resolution);
+        assertTrue(source.url.contains("master.m3u8#pornhub=1"));
+    }
+
     @Test
     public void skipsRemoteMediaAndThumbnailTransformsAsFinalStreams() throws Exception {
         final String html = "\"mediaDefinitions\":["

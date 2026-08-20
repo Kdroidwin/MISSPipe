@@ -36,8 +36,11 @@ final class PornhubSearchEngine {
 
         final String url = PornhubParsingHelper.searchUrl(query, page);
         final Document document = PornhubParsingHelper.fetchDocument(url);
-        final List<PornhubSearchResult> rawResults =
+        List<PornhubSearchResult> rawResults =
                 PornhubParsingHelper.extractVideoCards(document, RAW_ITEMS_PER_PAGE);
+        if (rawResults.isEmpty()) {
+            rawResults = PornhubParsingHelper.searchWebmasters(query, page, RAW_ITEMS_PER_PAGE);
+        }
 
         final Map<String, PornhubSearchResult> ranked = new LinkedHashMap<>();
         for (final PornhubSearchResult result : rawResults) {
@@ -52,6 +55,19 @@ final class PornhubSearchEngine {
             final PornhubSearchResult existing = ranked.get(result.id);
             if (existing == null || scored.relevanceScore > existing.relevanceScore) {
                 ranked.put(result.id, scored);
+            }
+        }
+
+        if (ranked.isEmpty() && !rawResults.isEmpty()) {
+            for (final PornhubSearchResult result : PornhubParsingHelper.searchWebmasters(
+                    query, page, RAW_ITEMS_PER_PAGE)) {
+                final int score = score(result, normalizedQuery, queryTokens);
+                if (score > 0) {
+                    ranked.put(result.id, new PornhubSearchResult(result.id, result.url,
+                            result.title, result.thumbnail, result.duration, result.uploaderName,
+                            result.uploaderUrl, result.tags, result.categories,
+                            result.searchableText, score));
+                }
             }
         }
 

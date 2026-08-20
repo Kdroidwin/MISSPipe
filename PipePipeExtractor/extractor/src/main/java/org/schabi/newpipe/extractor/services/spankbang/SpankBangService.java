@@ -17,6 +17,7 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
+import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
@@ -79,7 +80,18 @@ public final class SpankBangService extends StreamingService {
     }
     @Override public SuggestionExtractor getSuggestionExtractor() { return null; }
     @Override public SubscriptionExtractor getSubscriptionExtractor() { return null; }
-    @Override public KioskList getKioskList() { return new KioskList(this); }
+    @Override public KioskList getKioskList() throws ExtractionException {
+        final KioskList kiosks = new KioskList(this);
+        try {
+            kiosks.addKioskEntry((service, url, kioskId) -> new SpankBangKioskExtractor(
+                            service, SpankBangKioskLinkHandlerFactory.INSTANCE.fromId(kioskId), kioskId),
+                    SpankBangKioskLinkHandlerFactory.INSTANCE, "latest");
+            kiosks.setDefaultKiosk("latest");
+            return kiosks;
+        } catch (final Exception e) {
+            throw new ExtractionException("Could not initialize SpankBang kiosks", e);
+        }
+    }
     @Override public ChannelExtractor getChannelExtractor(final ListLinkHandler handler) { return null; }
     @Override public ChannelTabExtractor getChannelTabExtractor(final ListLinkHandler handler)
             throws ExtractionException { throw new ExtractionException("SpankBang has no channel extractor"); }
@@ -123,6 +135,37 @@ final class SpankBangSearchExtractor extends SearchExtractor {
         return new ListExtractor.InfoItemsPage<>(collector, null);
     }
     @Override protected InfoItemsPage<InfoItem> getPageInternal(final Page page) {
+        return InfoItemsPage.emptyPage();
+    }
+}
+
+final class SpankBangKioskLinkHandlerFactory extends ListLinkHandlerFactory {
+    static final SpankBangKioskLinkHandlerFactory INSTANCE = new SpankBangKioskLinkHandlerFactory();
+    @Override public String getId(final String url) { return "latest"; }
+    @Override public String getUrl(final String id, final List<FilterItem> content,
+                                   final List<FilterItem> sort) { return SpankBangParser.BASE_URL + "/"; }
+    @Override public boolean onAcceptUrl(final String url) {
+        return url != null && url.startsWith(SpankBangParser.BASE_URL);
+    }
+}
+
+final class SpankBangKioskExtractor extends KioskExtractor<org.schabi.newpipe.extractor.stream.StreamInfoItem> {
+    private Document document;
+    SpankBangKioskExtractor(final StreamingService service, final ListLinkHandler handler,
+                            final String kioskId) { super(service, handler, kioskId); }
+    @Override public void onFetchPage(@Nonnull final Downloader downloader)
+            throws IOException, ExtractionException { document = SpankBangParser.fetch(getUrl()); }
+    @Nonnull @Override public String getName() { return "Latest"; }
+    @Nonnull @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getInitialPage()
+            throws ExtractionException {
+        if (document == null) throw new ParsingException("SpankBang kiosk page was not fetched");
+        final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
+        for (final SpankBangItem item : SpankBangParser.cards(document, 40)) {
+            collector.commit(new SpankBangInfoItemExtractor(item));
+        }
+        return new InfoItemsPage<>(collector, null);
+    }
+    @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getPage(final Page page) {
         return InfoItemsPage.emptyPage();
     }
 }

@@ -17,6 +17,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ public final class JavNoniParsingHelper {
             "(?:https?:)?//[^\"'\\s<>]+\\.(?:m3u8|mp4)(?:\\?[^\"'\\s<>]*)?",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern PLAYER_FILE_PATTERN = Pattern.compile(
-            "[\"']?(?:file|src)[\"']?\\s*:\\s*[\"']([^\"']+\\.(?:m3u8|mp4)(?:\\?[^\"']*)?)[\"']",
+            "[\"']?(?:file|src|source)[\"']?\\s*[:=]\\s*[\"']([^\"']+\\.(?:m3u8|mp4)(?:\\?[^\"']*)?)[\"']",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern PACKED_SCRIPT_PATTERN = Pattern.compile(
             "eval\\s*\\(\\s*function\\s*\\(\\s*p\\s*,\\s*a\\s*,\\s*c\\s*,\\s*k\\s*,\\s*e\\s*,\\s*d\\s*\\)"
@@ -219,11 +220,8 @@ public final class JavNoniParsingHelper {
     }
 
     public static String extractEmbedUrl(final Document document) {
-        String embed = attr(document.selectFirst("meta[itemprop=embedURL]"), "content");
-        if (embed.isEmpty()) {
-            embed = attr(document.selectFirst("iframe[src*=\"/e/\"]"), "src");
-        }
-        return absoluteUrl(embed);
+        final List<String> urls = extractEmbedUrls(document);
+        return urls.isEmpty() ? "" : urls.get(0);
     }
 
     public static List<JavNoniVideoSource> findVideoSources(final Document pageDocument,
@@ -231,12 +229,21 @@ public final class JavNoniParsingHelper {
             throws IOException, ExtractionException {
         final LinkedHashMap<String, JavNoniVideoSource> sources = new LinkedHashMap<>();
         putVideoSourcesFromHtml(sources, pageDocument.html(), pageUrl);
-        final String embedUrl = extractEmbedUrl(pageDocument);
-        if (!embedUrl.isEmpty()) {
-            final Response response = NewPipe.getDownloader().get(embedUrl, browserHeaders(pageUrl));
-            putVideoSourcesFromHtml(sources, response.responseBody(), embedUrl);
-            if (sources.isEmpty()) {
-                postEmbedFormForSources(sources, embedUrl, pageUrl, response.responseBody());
+        if (sources.isEmpty()) {
+            for (final String embedUrl : extractEmbedUrls(pageDocument)) {
+                try {
+                    final Response response = NewPipe.getDownloader().get(embedUrl,
+                            browserHeaders(pageUrl));
+                    putVideoSourcesFromHtml(sources, response.responseBody(), embedUrl);
+                    if (sources.isEmpty()) {
+                        postEmbedFormForSources(sources, embedUrl, pageUrl, response.responseBody());
+                    }
+                    if (!sources.isEmpty()) {
+                        break;
+                    }
+                } catch (final IOException | ExtractionException ignored) {
+                    // A secondary player is useful when a host has expired or rate-limited a link.
+                }
             }
         }
         final List<JavNoniVideoSource> orderedSources = new ArrayList<>(sources.values());
@@ -293,6 +300,15 @@ public final class JavNoniParsingHelper {
         final String unescaped = unescapeUrl(html);
         collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unescaped), mediaPageUrl);
         collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unescaped), mediaPageUrl);
+        for (final Element source : Jsoup.parse(unescaped, mediaPageUrl).select(
+                "video source[src], video[src], source[src], [data-file], [data-src]")) {
+            for (final String attribute : new String[] {"src", "data-file", "data-src"}) {
+                final String value = source.hasAttr(attribute) ? source.absUrl(attribute) : "";
+                if (isPlayableVideoUrl(value)) {
+                    putVideoSource(sources, value, mediaPageUrl);
+                }
+            }
+        }
         for (final String unpacked : unpackPackedScripts(unescaped)) {
             collectUrlMatches(sources, PLAYER_FILE_PATTERN.matcher(unpacked), mediaPageUrl);
             collectUrlMatches(sources, DIRECT_VIDEO_URL_PATTERN.matcher(unpacked), mediaPageUrl);
@@ -608,7 +624,7 @@ public final class JavNoniParsingHelper {
     }
 
     private static String extractLuluFileCode(final String embedUrl) {
-        final Matcher matcher = Pattern.compile("/e/([A-Za-z0-9]+)").matcher(embedUrl);
+        final Matcher matcher = Pattern.compile("/e/([A-Za-z0-9_-]+)").matcher(embedUrl);
         return matcher.find() ? matcher.group(1) : "";
     }
 
@@ -644,10 +660,56 @@ public final class JavNoniParsingHelper {
     }
 
     private static String unescapeUrl(final String url) {
+        if (url == null || url.isEmpty()) {
+            return "";
+        }
         return url.replace("\\/", "/")
-                .replace("\\u002F", "/")
-                .replace("\\u0026", "&")
+                .replaceAll("(?i)\\\\u002f", "/")
+                .replaceAll("(?i)\\\\u0026", "&")
+                .replaceAll("(?i)\\\\x2f", "/")
+                .replaceAll("(?i)\\\\x26", "&")
                 .replace("&amp;", "&");
+    }
+
+    private static List<String> extractEmbedUrls(final Document document) {
+        final LinkedHashSet<String> urls = new LinkedHashSet<>();
+        addEmbedUrl(urls, attr(document.selectFirst("meta[itemprop=embedURL]"), "content"));
+        for (final Element element : document.select(
+                "iframe[src], iframe[data-src], a#tracking-url[href], "
+                        + "a[href*=luluvdo.com/e/], a[href*=lulustream.com/e/], "
+                        + "a[href*=playmogo.com/e/]")) {
+            addEmbedUrl(urls, firstNonEmpty(attr(element, "src"), attr(element, "data-src"),
+                    attr(element, "href")));
+        }
+        return new ArrayList<>(urls);
+    }
+
+    private static void addEmbedUrl(final LinkedHashSet<String> urls, final String rawUrl) {
+        final String url = absoluteUrl(rawUrl);
+        if (url.isEmpty()) {
+            return;
+        }
+        try {
+            final URI uri = new URI(url);
+            final String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            if ((host.equals("luluvdo.com") || host.endsWith(".luluvdo.com")
+                    || host.equals("lulustream.com") || host.endsWith(".lulustream.com")
+                    || host.equals("playmogo.com") || host.endsWith(".playmogo.com"))
+                    && uri.getPath() != null && uri.getPath().startsWith("/e/")) {
+                urls.add(url);
+            }
+        } catch (final URISyntaxException ignored) {
+            // Ignore malformed third-party player links.
+        }
+    }
+
+    private static String firstNonEmpty(final String... values) {
+        for (final String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private static String attr(final Element element, final String attr) {

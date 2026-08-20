@@ -5,7 +5,6 @@ import android.os.Bundle;
 import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.UserAction;
 import org.schabi.newpipe.extractor.NewPipe;
-import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandlerFactory;
@@ -14,6 +13,7 @@ import org.schabi.newpipe.util.ServiceHelper;
 
 public class DefaultKioskFragment extends KioskFragment {
     private int selectedServiceId = -1;
+    private boolean hasAvailableKiosk = true;
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -26,14 +26,30 @@ public class DefaultKioskFragment extends KioskFragment {
 
     @Override
     public void onResume() {
-        super.onResume();
-
-        if (selectedServiceId != ServiceHelper.getSelectedServiceId(requireContext())) {
+        final boolean shouldResolve = selectedServiceId
+                != ServiceHelper.getSelectedServiceId(requireContext()) || !hasAvailableKiosk;
+        if (shouldResolve) {
             if (currentWorker != null) {
                 currentWorker.dispose();
             }
             updateSelectedDefaultKiosk();
+        }
+
+        super.onResume();
+
+        if (shouldResolve && hasAvailableKiosk) {
             reloadContent();
+        } else if (!hasAvailableKiosk) {
+            showKioskUnavailableError();
+        }
+    }
+
+    @Override
+    protected void doInitialLoadLogic() {
+        if (hasAvailableKiosk) {
+            super.doInitialLoadLogic();
+        } else {
+            showKioskUnavailableError();
         }
     }
 
@@ -49,29 +65,45 @@ public class DefaultKioskFragment extends KioskFragment {
             }
 
             if (kioskId == null) {
-                // Some source-only services intentionally have no home feed. A restored front-page
-                // tab must still be renderable, so use the app's established default home source.
-                serviceId = ServiceList.MissAV.getServiceId();
-                kioskList = NewPipe.getService(serviceId).getKioskList();
-                kioskId = kioskList.getDefaultKioskId();
-            }
-
-            if (kioskId == null) {
-                throw new ExtractionException("No default kiosk is available");
+                clearResolvedKiosk();
+                return;
             }
 
             final ListLinkHandlerFactory handlerFactory =
                     kioskList.getListLinkHandlerFactoryByType(kioskId);
+            if (handlerFactory == null) {
+                clearResolvedKiosk();
+                return;
+            }
             url = handlerFactory.fromId(kioskId).getUrl();
+            if (url == null || url.isEmpty()) {
+                clearResolvedKiosk();
+                return;
+            }
 
             kioskTranslatedName = KioskTranslator.getTranslatedKioskName(kioskId, requireContext());
             name = kioskTranslatedName;
 
+            hasAvailableKiosk = true;
             currentInfo = null;
             currentNextPage = null;
         } catch (final ExtractionException e) {
+            clearResolvedKiosk();
             showError(new ErrorInfo(e, UserAction.REQUESTED_KIOSK,
                     "Loading default kiosk for selected service"));
         }
+    }
+
+    private void clearResolvedKiosk() {
+        hasAvailableKiosk = false;
+        kioskId = "";
+        url = "";
+        currentInfo = null;
+        currentNextPage = null;
+    }
+
+    private void showKioskUnavailableError() {
+        showError(new ErrorInfo(new ExtractionException("The selected service has no home feed"),
+                UserAction.REQUESTED_KIOSK, "Loading default kiosk for selected service"));
     }
 }

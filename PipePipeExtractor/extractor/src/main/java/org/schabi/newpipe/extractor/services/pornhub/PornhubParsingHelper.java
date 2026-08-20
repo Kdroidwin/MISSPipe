@@ -1,5 +1,8 @@
 package org.schabi.newpipe.extractor.services.pornhub;
 
+import com.grack.nanojson.JsonArray;
+import com.grack.nanojson.JsonObject;
+import com.grack.nanojson.JsonParser;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -27,6 +30,7 @@ import java.util.regex.Pattern;
 
 public final class PornhubParsingHelper {
     public static final String BASE_URL = "https://jp.pornhub.com";
+    private static final String WEBMASTERS_BASE_URL = "https://www.pornhub.com";
     public static final String MARKER = "#pornhub=1";
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -39,6 +43,9 @@ public final class PornhubParsingHelper {
     private static final Pattern MEDIA_DEFINITIONS_PATTERN =
             Pattern.compile("\"mediaDefinitions\"\\s*:\\s*\\[(.*?)]\\s*,\\s*\"isVertical\"",
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern MEDIA_DEFINITIONS_START_PATTERN =
+            Pattern.compile("\"mediaDefinitions\"\\s*:\\s*\\[",
+                    Pattern.CASE_INSENSITIVE);
     private static final Pattern MEDIA_OBJECT_PATTERN =
             Pattern.compile("\\{([^{}]*\"videoUrl\"[^{}]*)\\}",
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
@@ -153,6 +160,55 @@ public final class PornhubParsingHelper {
             throws IOException, ExtractionException {
         final List<PornhubSearchResult> results = PornhubSearchEngine.search(query, 1).results;
         return results.subList(0, Math.min(results.size(), count));
+    }
+
+    static List<PornhubSearchResult> searchWebmasters(final String query, final int page,
+                                                       final int count)
+            throws IOException, ExtractionException {
+        final String url = WEBMASTERS_BASE_URL + "/webmasters/search?search="
+                + encodeQuery(query) + "&page=" + Math.max(1, page);
+        final Response response = NewPipe.getDownloader().get(url, browserHeaders(BASE_URL + "/"));
+        if (response.responseCode() != 200) {
+            return Collections.emptyList();
+        }
+
+        try {
+            final JsonObject root = JsonParser.object().from(response.responseBody());
+            final Object videos = root.get("videos");
+            if (!(videos instanceof JsonArray)) {
+                return Collections.emptyList();
+            }
+            final LinkedHashMap<String, PornhubSearchResult> results = new LinkedHashMap<>();
+            for (final Object value : (JsonArray) videos) {
+                if (!(value instanceof JsonObject)) {
+                    continue;
+                }
+                final JsonObject video = (JsonObject) value;
+                final String videoUrl = normalizeUrl(jsonString(video, "url"));
+                final String id = extractIdOrEmpty(videoUrl);
+                final String title = jsonString(video, "title");
+                if (id.isEmpty() || isBadTitle(title)) {
+                    continue;
+                }
+                final String thumbnail = firstNonEmpty(jsonString(video, "default_thumb"),
+                        jsonString(video, "thumb"), jsonString(video, "thumbnail"));
+                final String uploader = firstNonEmpty(jsonString(video, "uploader"),
+                        jsonString(video, "username"), jsonString(video, "channel"));
+                final List<String> tags = jsonValues(video.get("tags"));
+                final List<String> categories = jsonValues(video.get("categories"));
+                results.putIfAbsent(id, new PornhubSearchResult(id, videoUrl, title,
+                        absoluteUrl(thumbnail), parseLong(jsonString(video, "duration"), -1),
+                        uploader.isEmpty() ? "Pornhub" : uploader, BASE_URL + "/", tags, categories,
+                        id + " " + title + " " + uploader + " " + String.join(" ", tags)
+                                + " " + String.join(" ", categories), 0));
+                if (results.size() >= count) {
+                    break;
+                }
+            }
+            return new ArrayList<>(results.values());
+        } catch (final Exception ignored) {
+            return Collections.emptyList();
+        }
     }
 
     public static List<PornhubSearchResult> listVideos(final String url, final int count)
@@ -381,6 +437,17 @@ public final class PornhubParsingHelper {
                 // HLS definitions from the watch page are enough for normal playback.
             }
         }
+        if (sources.isEmpty()) {
+            final String id = extractIdOrEmpty(referer);
+            if (!id.isEmpty()) {
+                try {
+                    final String embedUrl = BASE_URL + "/embed/" + id;
+                    putVideoSourcesFromHtml(sources, fetchText(embedUrl, referer));
+                } catch (final IOException | ExtractionException ignored) {
+                    // The watch-page definitions remain the primary source.
+                }
+            }
+        }
         return new ArrayList<>(sources.values());
     }
 
@@ -511,55 +578,95 @@ public final class PornhubParsingHelper {
 
     private static void putVideoSourcesFromHtml(final LinkedHashMap<String, PornhubVideoSource> sources,
                                                 final String html) {
+        putVideoSourcesFromDefinitions(sources, extractMediaDefinitionsArray(html));
         final String block = extractMediaDefinitionsBlock(html);
         final Matcher matcher = MEDIA_OBJECT_PATTERN.matcher(block.isEmpty() ? html : block);
         while (matcher.find()) {
             final String object = matcher.group(1);
-            final String url = unescapeUrl(extractJsonString(object, "videoUrl"));
-            if (isRemoteMediaUrl(url)) {
-                continue;
-            }
-            if (!isPlayableUrl(url)) {
-                continue;
-            }
-            final String format = extractJsonString(object, "format").toLowerCase(Locale.ROOT);
-            final String quality = normalizeQuality(firstNonEmpty(
-                    extractJsonString(object, "quality"),
-                    extractJsonNumber(object, "height"),
-                    guessQuality(url)));
-            final DeliveryMethod deliveryMethod = format.contains("hls")
-                    || url.toLowerCase(Locale.ROOT).contains(".m3u8")
-                    ? DeliveryMethod.HLS : DeliveryMethod.PROGRESSIVE_HTTP;
-            final String markedUrl = appendMarker(url);
-            final String key = markedUrl.replace(MARKER, "");
-            sources.putIfAbsent(key, new PornhubVideoSource(
-                    (deliveryMethod == DeliveryMethod.HLS ? "hls-" : "mp4-") + quality,
-                    markedUrl, quality, deliveryMethod));
+            addVideoSource(sources, extractJsonString(object, "videoUrl"),
+                    extractJsonString(object, "format"), firstNonEmpty(
+                            extractJsonString(object, "quality"),
+                            extractJsonNumber(object, "height")));
         }
+        putDirectVideoUrls(sources, html);
+        final String unescapedHtml = unescapeJson(html);
+        if (!unescapedHtml.equals(html)) {
+            putDirectVideoUrls(sources, unescapedHtml);
+        }
+    }
+
+    private static void putVideoSourcesFromDefinitions(
+            final LinkedHashMap<String, PornhubVideoSource> sources,
+            final String definitions) {
+        if (definitions.isEmpty()) {
+            return;
+        }
+        try {
+            final JsonArray values = JsonParser.array().from(definitions);
+            for (final Object value : values) {
+                if (!(value instanceof JsonObject)) {
+                    continue;
+                }
+                final JsonObject definition = (JsonObject) value;
+                addVideoSource(sources, jsonString(definition, "videoUrl"),
+                        jsonString(definition, "format"), firstNonEmpty(
+                                jsonString(definition, "quality"),
+                                jsonString(definition, "height")));
+            }
+        } catch (final Exception ignored) {
+            // Legacy pages are still handled by the regular expression fallback.
+        }
+    }
+
+    private static void putDirectVideoUrls(final LinkedHashMap<String, PornhubVideoSource> sources,
+                                           final String html) {
         final Matcher urlMatcher = Pattern.compile(
                 "https?:\\\\?/\\\\?/[^\"'<>\\s]+(?:\\.m3u8|\\.mp4)[^\"'<>\\s]*",
                 Pattern.CASE_INSENSITIVE).matcher(html);
         while (urlMatcher.find()) {
-            final String url = unescapeUrl(urlMatcher.group());
-            if (isRemoteMediaUrl(url)) {
-                continue;
-            }
-            if (!isPlayableUrl(url)) {
-                continue;
-            }
-            final DeliveryMethod method = url.toLowerCase(Locale.ROOT).contains(".m3u8")
-                    ? DeliveryMethod.HLS : DeliveryMethod.PROGRESSIVE_HTTP;
-            final String quality = normalizeQuality(guessQuality(url));
-            sources.putIfAbsent(url, new PornhubVideoSource(
-                    (method == DeliveryMethod.HLS ? "hls-" : "mp4-") + quality,
-                    appendMarker(url), quality, method));
+            addVideoSource(sources, urlMatcher.group(), "", "");
         }
+    }
+
+    private static void addVideoSource(final LinkedHashMap<String, PornhubVideoSource> sources,
+                                       final String rawUrl,
+                                       final String rawFormat,
+                                       final String rawQuality) {
+        final String url = unescapeUrl(rawUrl);
+        if (isRemoteMediaUrl(url) || !isPlayableUrl(url)) {
+            return;
+        }
+        final String format = rawFormat.toLowerCase(Locale.ROOT);
+        final String quality = normalizeQuality(firstNonEmpty(rawQuality, guessQuality(url)));
+        final DeliveryMethod deliveryMethod = format.contains("hls")
+                || url.toLowerCase(Locale.ROOT).contains(".m3u8")
+                ? DeliveryMethod.HLS : DeliveryMethod.PROGRESSIVE_HTTP;
+        final String markedUrl = appendMarker(url);
+        final String key = markedUrl.replace(MARKER, "");
+        sources.putIfAbsent(key, new PornhubVideoSource(
+                (deliveryMethod == DeliveryMethod.HLS ? "hls-" : "mp4-") + quality,
+                markedUrl, quality, deliveryMethod));
     }
 
     private static Set<String> extractRemoteMediaUrls(final String html) {
         final Set<String> urls = new HashSet<>();
         if (html == null || html.isEmpty()) {
             return urls;
+        }
+        final String definitions = extractMediaDefinitionsArray(html);
+        if (!definitions.isEmpty()) {
+            try {
+                for (final Object value : JsonParser.array().from(definitions)) {
+                    if (value instanceof JsonObject) {
+                        final String url = unescapeUrl(jsonString((JsonObject) value, "videoUrl"));
+                        if (isRemoteMediaUrl(url)) {
+                            urls.add(url);
+                        }
+                    }
+                }
+            } catch (final Exception ignored) {
+                // Fall back to legacy pattern matching below.
+            }
         }
         final Matcher objectMatcher = MEDIA_OBJECT_PATTERN.matcher(html);
         while (objectMatcher.find()) {
@@ -590,6 +697,41 @@ public final class PornhubParsingHelper {
         }
         final Matcher mediaMatcher = MEDIA_DEFINITIONS_PATTERN.matcher(html);
         return mediaMatcher.find() ? mediaMatcher.group(1) : "";
+    }
+
+    private static String extractMediaDefinitionsArray(final String html) {
+        if (html == null || html.isEmpty()) {
+            return "";
+        }
+        final Matcher matcher = MEDIA_DEFINITIONS_START_PATTERN.matcher(html);
+        if (!matcher.find()) {
+            return "";
+        }
+        final int start = matcher.end() - 1;
+        int depth = 0;
+        boolean quoted = false;
+        boolean escaped = false;
+        for (int index = start; index < html.length(); index++) {
+            final char current = html.charAt(index);
+            if (quoted) {
+                if (escaped) {
+                    escaped = false;
+                } else if (current == '\\') {
+                    escaped = true;
+                } else if (current == '"') {
+                    quoted = false;
+                }
+                continue;
+            }
+            if (current == '"') {
+                quoted = true;
+            } else if (current == '[') {
+                depth++;
+            } else if (current == ']' && --depth == 0) {
+                return html.substring(start, index + 1);
+            }
+        }
+        return "";
     }
 
     private static Element findVideoCard(final Element link) {
@@ -698,6 +840,35 @@ public final class PornhubParsingHelper {
         final Matcher matcher = Pattern.compile("\"" + Pattern.quote(key)
                 + "\"\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE).matcher(json);
         return matcher.find() ? matcher.group(1) : "";
+    }
+
+    private static String jsonString(final JsonObject object, final String key) {
+        if (object == null || key == null) {
+            return "";
+        }
+        final Object value = object.get(key);
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private static List<String> jsonValues(final Object value) {
+        if (value == null) {
+            return Collections.emptyList();
+        }
+        final List<String> values = new ArrayList<>();
+        if (value instanceof JsonArray) {
+            for (final Object item : (JsonArray) value) {
+                final String string = item == null ? "" : String.valueOf(item).trim();
+                if (!string.isEmpty() && !values.contains(string)) {
+                    values.add(string);
+                }
+            }
+        } else {
+            final String string = String.valueOf(value).trim();
+            if (!string.isEmpty()) {
+                values.add(string);
+            }
+        }
+        return values;
     }
 
     private static String extractIdOrEmpty(final String url) {

@@ -22,6 +22,7 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
+import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
@@ -71,7 +72,18 @@ public final class OhentaiService extends StreamingService {
     @Override public SearchExtractor getSearchExtractor(final SearchQueryHandler handler) { return new OhentaiSearchExtractor(this, handler); }
     @Override public SuggestionExtractor getSuggestionExtractor() { return null; }
     @Override public SubscriptionExtractor getSubscriptionExtractor() { return null; }
-    @Override public KioskList getKioskList() { return new KioskList(this); }
+    @Override public KioskList getKioskList() throws ExtractionException {
+        final KioskList kiosks = new KioskList(this);
+        try {
+            kiosks.addKioskEntry((service, url, kioskId) -> new OhentaiKioskExtractor(
+                            service, OhentaiKioskLinkHandlerFactory.INSTANCE.fromId(kioskId), kioskId),
+                    OhentaiKioskLinkHandlerFactory.INSTANCE, "latest");
+            kiosks.setDefaultKiosk("latest");
+            return kiosks;
+        } catch (final Exception e) {
+            throw new ExtractionException("Could not initialize OHentai kiosks", e);
+        }
+    }
     @Override public ChannelExtractor getChannelExtractor(final ListLinkHandler handler) { return null; }
     @Override public ChannelTabExtractor getChannelTabExtractor(final ListLinkHandler handler) throws ExtractionException { throw new ExtractionException("OHentai channel tabs unavailable"); }
     @Override public PlaylistExtractor getPlaylistExtractor(final ListLinkHandler handler) throws ExtractionException { throw new ExtractionException("OHentai playlists unavailable"); }
@@ -105,6 +117,37 @@ final class OhentaiSearchExtractor extends SearchExtractor {
         return new ListExtractor.InfoItemsPage<>(collector, null);
     }
     @Override protected InfoItemsPage<InfoItem> getPageInternal(final Page page) { return InfoItemsPage.emptyPage(); }
+}
+
+final class OhentaiKioskLinkHandlerFactory extends ListLinkHandlerFactory {
+    static final OhentaiKioskLinkHandlerFactory INSTANCE = new OhentaiKioskLinkHandlerFactory();
+    @Override public String getId(final String url) { return "latest"; }
+    @Override public String getUrl(final String id, final List<FilterItem> content,
+                                   final List<FilterItem> sort) { return OhentaiParser.BASE + "/"; }
+    @Override public boolean onAcceptUrl(final String url) {
+        return url != null && url.startsWith(OhentaiParser.BASE);
+    }
+}
+
+final class OhentaiKioskExtractor extends KioskExtractor<org.schabi.newpipe.extractor.stream.StreamInfoItem> {
+    private Document document;
+    OhentaiKioskExtractor(final StreamingService service, final ListLinkHandler handler,
+                          final String kioskId) { super(service, handler, kioskId); }
+    @Override public void onFetchPage(@Nonnull final Downloader downloader)
+            throws IOException, ExtractionException { document = OhentaiParser.fetch(getUrl()); }
+    @Nonnull @Override public String getName() { return "Latest"; }
+    @Nonnull @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getInitialPage()
+            throws ExtractionException {
+        if (document == null) throw new ParsingException("OHentai kiosk page was not fetched");
+        final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
+        for (final OhentaiItem item : OhentaiParser.cards(document, 40)) {
+            collector.commit(new OhentaiItemExtractor(item));
+        }
+        return new InfoItemsPage<>(collector, null);
+    }
+    @Override public InfoItemsPage<org.schabi.newpipe.extractor.stream.StreamInfoItem> getPage(final Page page) {
+        return InfoItemsPage.emptyPage();
+    }
 }
 
 final class OhentaiStreamExtractor extends StreamExtractor {

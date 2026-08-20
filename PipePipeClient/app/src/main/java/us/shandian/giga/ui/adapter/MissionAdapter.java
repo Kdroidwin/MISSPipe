@@ -74,7 +74,6 @@ import us.shandian.giga.ui.common.ProgressDrawable;
 import us.shandian.giga.util.Utility;
 
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
-import static android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION;
 import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
 import static org.schabi.newpipe.util.external_communication.ShareUtils.openAppChooser;
 import static us.shandian.giga.get.DownloadMission.ERROR_CONNECT_HOST;
@@ -367,7 +366,6 @@ public class MissionAdapter extends Adapter<ViewHolder> implements Handler.Callb
         intent.setDataAndType(resolveShareableUri(mission), mimeType);
         intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
 
-        intent.addFlags(FLAG_GRANT_PREFIX_URI_PERMISSION);
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {
             intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
         }

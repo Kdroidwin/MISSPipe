@@ -64,6 +64,7 @@ import org.schabi.newpipe.util.ExtractorHelper;
 import org.schabi.newpipe.util.Localization;
 import org.schabi.newpipe.util.NavigationHelper;
 import org.schabi.newpipe.util.PermissionHelper;
+import org.schabi.newpipe.util.ServiceHelper;
 import org.schabi.newpipe.util.StreamTypeUtil;
 import org.schabi.newpipe.util.ThemeHelper;
 import org.schabi.newpipe.util.external_communication.ShareUtils;
@@ -529,7 +530,8 @@ public class RouterActivity extends AppCompatActivity {
 
     private void handleText() {
         final String searchString = getIntent().getStringExtra(Intent.EXTRA_TEXT);
-        final int serviceId = getIntent().getIntExtra(Constants.KEY_SERVICE_ID, 0);
+        final int serviceId = getIntent().getIntExtra(Constants.KEY_SERVICE_ID,
+                ServiceHelper.getSelectedServiceId(this));
         final Intent intent = new Intent(getThemeWrapperContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);

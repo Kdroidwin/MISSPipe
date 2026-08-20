@@ -208,45 +208,70 @@ public final class ServiceHelper {
     }
 
     public static int getSelectedServiceId(final Context context) {
-        final String serviceName = PreferenceManager.getDefaultSharedPreferences(context)
+        final SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        final String serviceIdKey = context.getString(R.string.current_service_id_key);
+        if (preferences.contains(serviceIdKey)) {
+            final int storedServiceId = preferences.getInt(serviceIdKey, -1);
+            if (isKnownService(storedServiceId)) {
+                return storedServiceId;
+            }
+        }
+
+        final String serviceName = preferences
                 .getString(context.getString(R.string.current_service_key),
                         context.getString(R.string.default_service_value));
 
-        int serviceId;
+        final int serviceId;
         try {
             serviceId = NewPipe.getService(serviceName).getServiceId();
         } catch (final ExtractionException e) {
-            serviceId = DEFAULT_FALLBACK_SERVICE.getServiceId();
+            return DEFAULT_FALLBACK_SERVICE.getServiceId();
         }
 
+        // Preserve compatibility with existing name-based settings and backups while moving all
+        // future restores to the stable numeric identifier.
+        preferences.edit().putInt(serviceIdKey, serviceId).apply();
         return serviceId;
     }
 
     public static void setSelectedServiceId(final Context context, final int serviceId) {
-        String serviceName;
+        final String serviceName;
         try {
             serviceName = NewPipe.getService(serviceId).getServiceInfo().getName();
         } catch (final ExtractionException e) {
-            serviceName = DEFAULT_FALLBACK_SERVICE.getServiceInfo().getName();
+            setSelectedServicePreferences(context, DEFAULT_FALLBACK_SERVICE.getServiceId(),
+                    DEFAULT_FALLBACK_SERVICE.getServiceInfo().getName());
+            return;
         }
 
-        setSelectedServicePreferences(context, serviceName);
+        setSelectedServicePreferences(context, serviceId, serviceName);
     }
 
     public static void setSelectedServiceId(final Context context, final String serviceName) {
         final int serviceId = NewPipe.getIdOfService(serviceName);
         if (serviceId == -1) {
-            setSelectedServicePreferences(context,
+            setSelectedServicePreferences(context, DEFAULT_FALLBACK_SERVICE.getServiceId(),
                     DEFAULT_FALLBACK_SERVICE.getServiceInfo().getName());
         } else {
-            setSelectedServicePreferences(context, serviceName);
+            setSelectedServicePreferences(context, serviceId, serviceName);
         }
     }
 
     private static void setSelectedServicePreferences(final Context context,
+                                                      final int serviceId,
                                                       final String serviceName) {
         PreferenceManager.getDefaultSharedPreferences(context).edit().
+                putInt(context.getString(R.string.current_service_id_key), serviceId).
                 putString(context.getString(R.string.current_service_key), serviceName).apply();
+    }
+
+    private static boolean isKnownService(final int serviceId) {
+        try {
+            NewPipe.getService(serviceId);
+            return true;
+        } catch (final ExtractionException e) {
+            return false;
+        }
     }
 
     public static long getCacheExpirationMillis(final int serviceId) {

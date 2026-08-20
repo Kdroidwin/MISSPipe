@@ -3,6 +3,7 @@ package org.schabi.newpipe.error;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -58,10 +59,28 @@ public class ReCaptchaActivity extends AppCompatActivity {
     public static String sanitizeRecaptchaUrl(@Nullable final String url) {
         if (url == null || url.trim().isEmpty()) {
             return YT_URL; // YouTube is the most likely service to have thrown a recaptcha
-        } else {
-            // remove "pbj=1" parameter from YouYube urls, as it makes the page JSON and not HTML
-            return url.replace("&pbj=1", "").replace("pbj=1&", "").replace("?pbj=1", "");
         }
+        final Uri uri = Uri.parse(url.trim());
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !isAllowedRecaptchaHost(uri.getHost())) {
+            return YT_URL;
+        }
+        // Remove "pbj=1" from YouTube URLs because it requests JSON rather than an HTML page.
+        return url.replace("&pbj=1", "").replace("pbj=1&", "").replace("?pbj=1", "");
+    }
+
+    private static boolean isAllowedRecaptchaHost(@Nullable final String host) {
+        if (host == null) {
+            return false;
+        }
+        final String normalizedHost = host.toLowerCase(java.util.Locale.ROOT);
+        return normalizedHost.equals("youtube.com")
+                || normalizedHost.endsWith(".youtube.com")
+                || normalizedHost.equals("google.com")
+                || normalizedHost.endsWith(".google.com")
+                || normalizedHost.equals("gstatic.com")
+                || normalizedHost.endsWith(".gstatic.com")
+                || normalizedHost.equals("recaptcha.net")
+                || normalizedHost.endsWith(".recaptcha.net");
     }
 
     private ActivityRecaptchaBinding recaptchaBinding;
@@ -84,6 +103,12 @@ public class ReCaptchaActivity extends AppCompatActivity {
         // enable Javascript
         final WebSettings webSettings = recaptchaBinding.reCaptchaWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setAllowFileAccess(false);
+        webSettings.setAllowContentAccess(false);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            webSettings.setSafeBrowsingEnabled(true);
+        }
         webSettings.setUserAgentString(DownloaderImpl.USER_AGENT);
 
         recaptchaBinding.reCaptchaWebView.setWebViewClient(new WebViewClientCompat() {

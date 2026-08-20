@@ -3,27 +3,32 @@ package org.schabi.newpipe.extractor.services.xnxx;
 import static org.junit.Assert.assertEquals;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.junit.Test;
-
-import java.util.List;
 
 public final class XnxxParserTest {
     @Test
-    public void extractsSearchCardsWithRelativeUrlsWithoutDocumentBaseUri() {
-        final Document document = Jsoup.parse("<div id=\"video_h7353fa\" data-eid=\"h7353fa\" "
-                + "class=\"thumb-block\"><div class=\"thumb\"><img "
-                + "data-src=\"//img-hw.xnxx-cdn.com/videos/thumbs/ab/cd.jpg\"></div>"
-                + "<div class=\"thumb-under\"><p><a href=\"/video-h7353fa/bwc_\" "
-                + "title=\"BWC search result\">BWC search result</a></p>"
-                + "<span class=\"metadata\">12 min</span></div></div>");
+    public void currentListingCardUsesTheVideoLinkInsteadOfTheUploaderLink() {
+        final String html = "<div class='thumb-block video'>"
+                + "<div class='thumb'><a href='/video-1hy04769/example'><img "
+                + "data-sfwthumb='https://cdn.example/thumbnail.jpg'></a></div>"
+                + "<div class='thumb-under'><div class='uploader'><a href='/porn-maker/name'>"
+                + "Uploader</a></div><a class='title' href='/video-1hy04769/example' "
+                + "title='Video title'>Video title</a><div class='metadata'>10 min</div></div>"
+                + "</div>";
 
-        final List<XnxxItem> items = XnxxParser.cards(document, 10);
+        final java.util.List<XnxxItem> items = XnxxParser.cards(Jsoup.parse(html), 10);
 
         assertEquals(1, items.size());
-        assertEquals("h7353fa", items.get(0).id);
-        assertEquals("https://www.xnxx.com/video-h7353fa/bwc_", items.get(0).url);
-        assertEquals("https://img-hw.xnxx-cdn.com/videos/thumbs/ab/cd.jpg",
-                items.get(0).thumbnail);
+        assertEquals("1hy04769", items.get(0).id);
+        assertEquals("Video title", items.get(0).title);
+        assertEquals("https://cdn.example/thumbnail.jpg", items.get(0).thumbnail);
+    }
+
+    @Test
+    public void searchUsesTheCanonicalFirstPageUrl() {
+        assertEquals("https://www.xnxx.com/search/test+query",
+                XnxxParser.searchUrl("test query", 0));
+        assertEquals("https://www.xnxx.com/search/test+query/1",
+                XnxxParser.searchUrl("test query", 1));
     }
 }

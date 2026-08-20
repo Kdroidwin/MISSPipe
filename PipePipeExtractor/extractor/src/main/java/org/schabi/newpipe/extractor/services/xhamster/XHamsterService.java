@@ -14,6 +14,7 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
+import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.linkhandler.*;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
@@ -46,7 +47,18 @@ public final class XHamsterService extends StreamingService {
     @Override public SearchExtractor getSearchExtractor(final SearchQueryHandler h) { return new XHamsterSearch(this, h); }
     @Override public SuggestionExtractor getSuggestionExtractor() { return null; }
     @Override public SubscriptionExtractor getSubscriptionExtractor() { return null; }
-    @Override public KioskList getKioskList() { return new KioskList(this); }
+    @Override public KioskList getKioskList() throws ExtractionException {
+        KioskList kiosks = new KioskList(this);
+        try {
+            kiosks.addKioskEntry((service, url, kioskId) -> new XHamsterKiosk(
+                            service, XHamsterKioskLinks.INSTANCE.fromId(kioskId), kioskId),
+                    XHamsterKioskLinks.INSTANCE, "latest");
+            kiosks.setDefaultKiosk("latest");
+            return kiosks;
+        } catch (final Exception e) {
+            throw new ExtractionException("Could not initialize xHamster kiosks", e);
+        }
+    }
     @Override public ChannelExtractor getChannelExtractor(final ListLinkHandler h) { return null; }
     @Override public ChannelTabExtractor getChannelTabExtractor(final ListLinkHandler h) throws ExtractionException { throw new ExtractionException("xHamster channel tabs unavailable"); }
     @Override public PlaylistExtractor getPlaylistExtractor(final ListLinkHandler h) throws ExtractionException { throw new ExtractionException("xHamster playlists unavailable"); }
@@ -74,6 +86,25 @@ final class XHamsterSearch extends SearchExtractor {
     }
     @Override protected InfoItemsPage<InfoItem> getPageInternal(Page p) { return InfoItemsPage.emptyPage(); }
 }
+final class XHamsterKioskLinks extends ListLinkHandlerFactory {
+    static final XHamsterKioskLinks INSTANCE=new XHamsterKioskLinks();
+    @Override public String getId(String url){return "latest";}
+    @Override public String getUrl(String id,List<FilterItem> c,List<FilterItem> s){return XHamsterParser.latestUrl();}
+    @Override public boolean onAcceptUrl(String url){return url!=null&&url.startsWith(XHamsterParser.BASE);}
+}
+final class XHamsterKiosk extends KioskExtractor<StreamInfoItem> {
+    private Document page;
+    XHamsterKiosk(StreamingService s,ListLinkHandler h,String id){super(s,h,id);}
+    @Override public void onFetchPage(@Nonnull Downloader d)throws IOException,ExtractionException{page=XHamsterParser.fetch(getUrl());}
+    @Nonnull @Override public String getName(){return "Latest";}
+    @Nonnull @Override public InfoItemsPage<StreamInfoItem> getInitialPage()throws ExtractionException{
+        if(page==null)throw new ParsingException("xHamster kiosk page was not fetched");
+        StreamInfoItemsCollector out=new StreamInfoItemsCollector(getServiceId());
+        for(XHamsterItem i:XHamsterParser.cards(page,40))out.commit(new XHamsterItemExtractor(i));
+        return new InfoItemsPage<>(out,null);
+    }
+    @Override public InfoItemsPage<StreamInfoItem> getPage(Page p){return InfoItemsPage.emptyPage();}
+}
 final class XHamsterStream extends StreamExtractor {
     private Document page;
     XHamsterStream(StreamingService s,LinkHandler h){super(s,h);}
@@ -95,6 +126,7 @@ final class XHamsterItem { final String id,url,title,thumb;final long duration; 
 final class XHamsterItemExtractor implements StreamInfoItemExtractor { final XHamsterItem i;XHamsterItemExtractor(XHamsterItem x){i=x;} public String getName(){return i.title;}public String getUrl(){return i.url;}public String getThumbnailUrl(){return i.thumb;}public StreamType getStreamType(){return StreamType.VIDEO_STREAM;}public long getDuration(){return i.duration;}public long getViewCount(){return -1;}public String getUploaderName(){return "xHamster";}public String getUploaderUrl(){return XHamsterParser.BASE;}@Nullable public String getTextualUploadDate(){return null;}@Nullable public DateWrapper getUploadDate(){return null;} }
 final class XHamsterParser {
     static final String BASE="https://jp.xhamster.com"; private static final Pattern HLS=Pattern.compile("https://[^\\\" ]+?_TPL_\\.(?:h264|av1)\\.mp4\\.m3u8"); private static final Pattern DUR=Pattern.compile("(\\d+):(\\d{2})(?::(\\d{2}))?");
+    static String latestUrl(){return BASE+"/newest";}
     static Document fetch(String u)throws IOException,ExtractionException{Response r=NewPipe.getDownloader().get(u,headers());return Jsoup.parse(r.responseBody(),u);}
     static Map<String,List<String>> headers(){Map<String,List<String>> h=new HashMap<>();h.put("Referer",Collections.singletonList(BASE+"/"));h.put("User-Agent",Collections.singletonList("Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36"));return h;}
     static String id(String u)throws ParsingException{try{String p=URI.create(u).getPath();int n=p.indexOf("/videos/");if(n>=0)return p.substring(n+8).split("/",2)[0];}catch(Exception ignored){}throw new ParsingException("Could not extract xHamster id: "+u);}
@@ -105,12 +137,12 @@ final class XHamsterParser {
     static long duration(Element e){return durationText(e.text());}
     private static long durationText(String text){Matcher m=DUR.matcher(text);if(!m.find())return -1;long a=Long.parseLong(m.group(1)),b=Long.parseLong(m.group(2));return m.group(3)==null?a*60+b:a*3600+b*60+Long.parseLong(m.group(3));}
     static List<XHamsterItem> cards(Element root,int max){
-        return parseCards(root, "div.video-thumb,div[data-role=mobile-video-thumb]", max);
+        return parseCards(root, "div.video-thumb,div[data-role=mobile-video-thumb],[data-role=related-item]", max);
     }
     static List<XHamsterItem> relatedCards(Element root,int max){
         LinkedHashMap<String,XHamsterItem> items=new LinkedHashMap<>();
         for(XHamsterItem item:initialVideoList(root,max))items.putIfAbsent(item.id,item);
-        for(XHamsterItem item:parseCards(root, "div.video-thumb,div[data-role=mobile-video-thumb]", max)){
+        for(XHamsterItem item:parseCards(root, "div.video-thumb,div[data-role=mobile-video-thumb],[data-role=related-item]", max)){
             items.putIfAbsent(item.id,item);
             if(items.size()>=max)break;
         }
@@ -119,15 +151,15 @@ final class XHamsterParser {
     private static List<XHamsterItem> parseCards(Element root,String selector,int max){
         LinkedHashMap<String,XHamsterItem> out=new LinkedHashMap<>();
         for(Element card:root.select(selector)){
-            Element link=card.selectFirst("a[data-role=thumb-link][href*=/videos/]");
-            Element titleLink=card.selectFirst("a[data-role=thumb-link][title]");
+            Element link=card.selectFirst("a[data-role=thumb-link][href*=/videos/],a[href*=/videos/]");
+            Element titleLink=card.selectFirst("a[data-role=thumb-link][title],a[href*=/videos/][title]");
             if(link==null)continue;
             String url=link.absUrl("href");
             String id=firstNonEmpty(card.attr("data-video-id"), idFromUrl(url));
-            String title=firstNonEmpty(link.attr("aria-label"),titleLink==null?"":titleLink.attr("title"),titleLink==null?"":titleLink.text());
+            Element image=card.selectFirst("img[data-role=thumb-preview-img],img[data-src],img");
+            String title=firstNonEmpty(link.attr("aria-label"),titleLink==null?"":titleLink.attr("title"),titleLink==null?"":titleLink.text(),image==null?"":image.attr("alt"));
             if(id.isEmpty()||url.isEmpty()||title.isEmpty())continue;
-            Element image=card.selectFirst("img[data-role=thumb-preview-img]");
-            String thumbnail=image==null?"":firstNonEmpty(image.absUrl("src"),image.absUrl("data-src"),firstSrc(image.attr("srcset")));
+            String thumbnail=image==null?"":firstNonEmpty(image.absUrl("data-src"),image.absUrl("src"),firstSrc(image.attr("srcset")));
             Element durationElement=card.selectFirst("[data-role=video-duration]");
             out.putIfAbsent(id,new XHamsterItem(id,url,title,thumbnail,duration(durationElement==null?card:durationElement)));
             if(out.size()>=max)break;

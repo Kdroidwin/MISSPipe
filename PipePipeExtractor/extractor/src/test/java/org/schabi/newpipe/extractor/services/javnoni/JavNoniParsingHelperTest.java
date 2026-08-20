@@ -116,4 +116,25 @@ public class JavNoniParsingHelperTest {
                         + "https%3A%2F%2Fplaymogo.com%2Fe%2Fexample",
                 sources.values().iterator().next().url);
     }
+
+    @Test
+    public void extractsEscapedPlayerAndKeepsAlternateEmbedCandidates() throws Exception {
+        final Document document = Jsoup.parse("<html><head>"
+                + "<meta itemprop='embedURL' content='https://luluvdo.com/e/primary_1'>"
+                + "</head><body><a id='tracking-url' href='https://playmogo.com/e/fallback-2'>"
+                + "Watch</a></body></html>", JavNoniParsingHelper.BASE_URL + "/");
+        assertEquals("https://luluvdo.com/e/primary_1",
+                JavNoniParsingHelper.extractEmbedUrl(document));
+
+        final LinkedHashMap<String, JavNoniVideoSource> sources = new LinkedHashMap<>();
+        final Method method = JavNoniParsingHelper.class.getDeclaredMethod(
+                "putVideoSourcesFromHtml", LinkedHashMap.class, String.class, String.class);
+        method.setAccessible(true);
+        method.invoke(null, sources, "<video><source data-file='https:\\u002F\\u002Fcdn.tnmr.org"
+                        + "\\u002Fhls\\u002Fmaster.m3u8?token=ok'></video>",
+                "https://luluvdo.com/e/primary_1");
+
+        assertEquals(1, sources.size());
+        assertEquals(DeliveryMethod.HLS, sources.values().iterator().next().deliveryMethod);
+    }
 }

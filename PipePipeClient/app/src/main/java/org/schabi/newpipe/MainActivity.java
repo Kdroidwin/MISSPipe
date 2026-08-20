@@ -20,7 +20,6 @@
 
 package org.schabi.newpipe;
 
-import static org.schabi.newpipe.util.AnnouncementParser.parseContentsBeforeId;
 import static org.schabi.newpipe.util.Localization.assureCorrectAppLanguage;
 
 import android.app.AlertDialog;
@@ -108,6 +107,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int ITEM_ID_HISTORY = -5;
     private static final int ITEM_ID_SETTINGS = 0;
     private static final int ITEM_ID_ABOUT = 1;
+    // Drawer item IDs must not overlap service IDs. Service IDs are persisted and may grow as
+    // sources are added, while Menu#findItem searches every menu group.
+    private static final int ITEM_ID_KIOSK_BASE = 10_000;
 
     private static final int ORDER = 0;
 
@@ -174,81 +176,8 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putString(getString(R.string.preferred_audio_language_key), "original").apply();
         } // remove this after sometime
 
-        if (prefs.getBoolean(app.getString(R.string.update_app_key), false)) {
-            // Start the worker which is checking all conditions
-            // and eventually searching for a new version.
-                NewVersionWorker.enqueueNewVersionCheckingWork(app, false);
-        }
-
-        int currentVersionCode = BuildConfig.VERSION_CODE;
-        int storedVersionCode = prefs.getInt("version_code", 0);
-        long lastShowDonationTime = prefs.getLong("last_show_donation_time", 0);
-        long currentTime = System.currentTimeMillis();
-
-        if (currentVersionCode > storedVersionCode + 90) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(R.string.fragment_feed_title);
-            builder.setMessage(R.string.update_log);
-            builder.setPositiveButton(R.string.ok, null);
-
-            AlertDialog.Builder builder2 = new AlertDialog.Builder(this);
-            builder2.setTitle(R.string.donation_dialog_title);
-            builder2.setMessage(R.string.donation_dialog_message);
-
-            builder2.setPositiveButton(R.string.sponsor_promote, (dialog, which) -> {
-                ShareUtils.openUrlInBrowser(this, getString(R.string.donation_url));
-            });
-            builder2.setNegativeButton(R.string.no, null);
-
-            final AlertDialog dialog2 = builder2.create();
-
-            final AlertDialog dialog1 = builder.create();
-            dialog1.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    if((storedVersionCode / 100 < 1101 && currentTime - lastShowDonationTime > 14 * 24 * 60 * 60 * 1000)
-                            || currentTime - lastShowDonationTime > 30L * 24 * 60 * 60 * 1000) {
-                        prefs.edit().putLong("last_show_donation_time", currentTime).apply();
-                        dialog2.show();
-                    }
-                }
-            });
-
-            dialog1.show();
-            prefs.edit().putInt("version_code", currentVersionCode).apply();
-        }
-        String lastAnnouncementId = prefs.getString("last_announcement_id", null);
-        try {
-            NewPipe.getDownloader().getAsync("https://github.com/InfinityLoop1308/PipePipe/wiki/Announcement", resp -> {
-                AnnouncementParser.ParsedResult result = parseContentsBeforeId(resp.responseBody(), lastAnnouncementId);
-                if(result.latestId != null) {
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    handler.post(() -> {
-                        AlertDialog.Builder builder3 = new AlertDialog.Builder(this);
-                        builder3.setMessage(result.contents);
-                        builder3.setTitle(R.string.announcement);
-                        builder3.setPositiveButton(R.string.ok, (dialog, which) -> {
-                            prefs.edit().putString("last_announcement_id", result.latestId).apply();
-                        });
-                        builder3.show();
-                    });
-                }
-            });
-        } catch (Exception ignore) {
-        }
-
-
         int isFirstRun = prefs.getInt("isFirstRun", 0);
         if (isFirstRun == 0) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(R.string.dialog_title_enable_update_checker);
-            builder.setMessage(R.string.dialog_message_enable_update_checker);
-            builder.setPositiveButton(R.string.ok, (dialog, which) -> {
-                prefs.edit().putBoolean(app.getString(R.string.update_app_key), true).apply();
-                NewVersionWorker.enqueueNewVersionCheckingWork(app, true);
-            });
-            builder.setNegativeButton(R.string.no, (dialog, which) -> prefs.edit().putBoolean(app.getString(R.string.update_app_key), false).apply());
-            builder.show();
             prefs.edit().putInt("isFirstRun", 1).apply();
             PermissionChecker.checkNotificationPermission(this);
         }
@@ -294,14 +223,14 @@ public class MainActivity extends AppCompatActivity {
         final int currentServiceId = ServiceHelper.getSelectedServiceId(this);
         final StreamingService service = NewPipe.getService(currentServiceId);
 
-        int kioskId = 0;
+        int kioskIndex = 0;
 
         for (final String ks : service.getKioskList().getAvailableKiosks()) {
             drawerLayoutBinding.navigation.getMenu()
-                    .add(R.id.menu_tabs_group, kioskId, 0, KioskTranslator
+                    .add(R.id.menu_tabs_group, ITEM_ID_KIOSK_BASE + kioskIndex, 0, KioskTranslator
                             .getTranslatedKioskName(ks, this))
                     .setIcon(KioskTranslator.getKioskIcon(ks));
-            kioskId++;
+            kioskIndex++;
         }
 
         drawerLayoutBinding.navigation.getMenu()
@@ -350,18 +279,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void changeService(final MenuItem item) {
+        final int previousServiceId = ServiceHelper.getSelectedServiceId(this);
         final MenuItem previousService = drawerLayoutBinding.navigation.getMenu()
-                .findItem(ServiceHelper.getSelectedServiceId(this));
-        if (previousService != null) {
+                .findItem(previousServiceId);
+        if (previousService != null && previousService.getGroupId() == R.id.menu_services_group) {
             previousService.setChecked(false);
         }
         ServiceHelper.setSelectedServiceId(this, item.getItemId());
         SearchFragment.setPersistedSearchServiceId(this, item.getItemId());
-        final MenuItem selectedService = drawerLayoutBinding.navigation.getMenu()
-                .findItem(ServiceHelper.getSelectedServiceId(this));
-        if (selectedService != null) {
-            selectedService.setChecked(true);
-        }
+        item.setChecked(true);
+
+        // DefaultKioskFragment is retained by ViewPager. Recreate the main content so it cannot
+        // keep the previous service's URL after the selected service changes.
+        getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        NavigationHelper.openMainFragment(getSupportFragmentManager());
     }
 
     private void tabSelected(final MenuItem item) throws ExtractionException {
@@ -382,20 +313,26 @@ public class MainActivity extends AppCompatActivity {
                 NavigationHelper.openStatisticFragment(getSupportFragmentManager());
                 break;
             default:
+                if (item.getItemId() < ITEM_ID_KIOSK_BASE) {
+                    return;
+                }
                 final int currentServiceId = ServiceHelper.getSelectedServiceId(this);
                 final StreamingService service = NewPipe.getService(currentServiceId);
                 String serviceName = "";
 
-                int kioskId = 0;
+                int kioskIndex = 0;
                 for (final String ks : service.getKioskList().getAvailableKiosks()) {
-                    if (kioskId == item.getItemId()) {
+                    if (ITEM_ID_KIOSK_BASE + kioskIndex == item.getItemId()) {
                         serviceName = ks;
+                        break;
                     }
-                    kioskId++;
+                    kioskIndex++;
                 }
 
-                NavigationHelper.openKioskFragment(getSupportFragmentManager(), currentServiceId,
-                        serviceName);
+                if (!serviceName.isEmpty()) {
+                    NavigationHelper.openKioskFragment(getSupportFragmentManager(), currentServiceId,
+                            serviceName);
+                }
                 break;
         }
     }
@@ -826,7 +763,8 @@ public class MainActivity extends AppCompatActivity {
 
             if (intent.hasExtra(Constants.KEY_LINK_TYPE)) {
                 final String url = intent.getStringExtra(Constants.KEY_URL);
-                final int serviceId = intent.getIntExtra(Constants.KEY_SERVICE_ID, 0);
+                final int serviceId = intent.getIntExtra(Constants.KEY_SERVICE_ID,
+                        ServiceHelper.getSelectedServiceId(this));
                 String title = intent.getStringExtra(Constants.KEY_TITLE);
                 if (title == null) {
                     title = "";
@@ -864,7 +802,8 @@ public class MainActivity extends AppCompatActivity {
                 if (searchString == null) {
                     searchString = "";
                 }
-                final int serviceId = intent.getIntExtra(Constants.KEY_SERVICE_ID, 0);
+                final int serviceId = intent.getIntExtra(Constants.KEY_SERVICE_ID,
+                        ServiceHelper.getSelectedServiceId(this));
                 NavigationHelper.openSearchFragment(
                         getSupportFragmentManager(),
                         serviceId,
