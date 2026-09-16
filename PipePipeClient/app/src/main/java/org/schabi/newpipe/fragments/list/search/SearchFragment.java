@@ -52,6 +52,7 @@ import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelTabInfo;
+import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 import org.schabi.newpipe.extractor.linkhandler.ChannelTabs;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
@@ -916,6 +917,7 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
                     // Only show remote suggestions if they are enabled in settings and
                     // the query length is at least THRESHOLD_NETWORK_SUGGESTION
                     final boolean shallShowRemoteSuggestionsNow = !channelSearchMode
+                            && !ServiceList.JavFun.equals(service)
                             && showRemoteSuggestions
                             && query.length() >= THRESHOLD_NETWORK_SUGGESTION;
 
@@ -1098,6 +1100,11 @@ public class SearchFragment extends BaseListFragment<SearchInfo, ListExtractor.I
         if (exception instanceof SearchExtractor.NothingFoundException) {
             infoListAdapter.clearStreamItemList();
             showEmptyState();
+        } else if (exception instanceof ReCaptchaException) {
+            final Intent intent = new Intent(requireContext(), ReCaptchaActivity.class);
+            intent.putExtra(ReCaptchaActivity.RECAPTCHA_URL_EXTRA,
+                    ((ReCaptchaException) exception).getUrl());
+            startActivityForResult(intent, ReCaptchaActivity.RECAPTCHA_REQUEST);
         } else {
             showError(new ErrorInfo(exception, UserAction.SEARCHED, searchString, serviceId));
         }

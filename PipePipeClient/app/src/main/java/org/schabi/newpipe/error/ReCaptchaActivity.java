@@ -80,7 +80,15 @@ public class ReCaptchaActivity extends AppCompatActivity {
                 || normalizedHost.equals("gstatic.com")
                 || normalizedHost.endsWith(".gstatic.com")
                 || normalizedHost.equals("recaptcha.net")
-                || normalizedHost.endsWith(".recaptcha.net");
+                || normalizedHost.endsWith(".recaptcha.net")
+                || normalizedHost.equals("jav-fun.cc")
+                || normalizedHost.endsWith(".jav-fun.cc");
+    }
+
+    private static boolean isJavFunUrl(@NonNull final String url) {
+        final String host = Uri.parse(url).getHost();
+        return host != null && (host.equalsIgnoreCase("jav-fun.cc")
+                || host.toLowerCase(java.util.Locale.ROOT).endsWith(".jav-fun.cc"));
     }
 
     private ActivityRecaptchaBinding recaptchaBinding;
@@ -205,6 +213,9 @@ public class ReCaptchaActivity extends AppCompatActivity {
 
         final String cookies = CookieManager.getInstance().getCookie(url);
         handleCookies(cookies);
+        if (isJavFunUrl(url) && cookies != null) {
+            addCookie(cookies);
+        }
 
         // sometimes cookies are inside the url
         final int abuseStart = url.indexOf("google_abuse=");

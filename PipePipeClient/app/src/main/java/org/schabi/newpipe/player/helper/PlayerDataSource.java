@@ -97,6 +97,8 @@ public class PlayerDataSource {
     private static final String ONE_FOUR_ONE_TUBE_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final String IWARA_USER_AGENT =
+            "Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0";
 
     /**
      * An approximately 4.3 times greater value than the
@@ -550,6 +552,22 @@ public class PlayerDataSource {
         final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
                 new DefaultHttpDataSource.Factory()
                         .setUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0").setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getIwaraProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://www.iwara.tv/" : pageReferer;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer, "Origin", "https://www.iwara.tv",
+                "X-Version", "b25f20ee9a87452f0c4b36e4bd53264b4eb37f46",
+                "Accept", "video/*;q=0.9,*/*;q=0.5", "Accept-Encoding", "identity");
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(IWARA_USER_AGENT).setDefaultRequestProperties(headers))
                 .setTransferListener(transferListener);
         return new ProgressiveMediaSource.Factory(upstreamFactory)
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);

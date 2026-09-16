@@ -21,6 +21,7 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
 import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
@@ -101,7 +102,7 @@ final class Config {
     String id(final String url) throws ParsingException { String value = absolute(url); if (!accepts(value)) throw new ParsingException("Invalid video URL: " + url); return value.substring(value.indexOf(videoPath) + videoPath.length()); }
     Map<String, List<String>> headers() {
         final Map<String, List<String>> h = new java.util.HashMap<>();
-        h.put("User-Agent", Collections.singletonList("Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0"));
+        h.put("User-Agent", Collections.singletonList("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"));
         h.put("Accept", Collections.singletonList("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"));
         h.put("Accept-Language", Collections.singletonList("ja"));
         h.put("Referer", Collections.singletonList(base + "/"));
@@ -170,20 +171,20 @@ final class Parser {
     private static final Pattern MEDIA = Pattern.compile("https?:(?:\\\\/|/){2}[^\\\"'<>\\s]+?\\.(?:mp4|m3u8)[^\\\"'<>\\s]*", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUALITY = Pattern.compile("(?:-|_)(\\d{3,4})p(?:[.?-]|$)", Pattern.CASE_INSENSITIVE);
     private Parser() { }
-    static Document fetch(final String url, final Config c) throws IOException, ExtractionException { final Response r = NewPipe.getDownloader().get(url, c.headers()); if (r.responseCode() != 200) throw new ParsingException("HTTP " + r.responseCode()); return Jsoup.parse(r.responseBody(), r.latestUrl()); }
+    static Document fetch(final String url, final Config c) throws IOException, ExtractionException { final Response r = NewPipe.getDownloader().get(url, c.headers()); if (r.responseCode() == 403 && c == Config.JAV_FUN) throw new ReCaptchaException("JAV-FUN Cloudflare challenge requested", url); if (r.responseCode() != 200) throw new ParsingException("HTTP " + r.responseCode()); return Jsoup.parse(r.responseBody(), r.latestUrl()); }
     static List<Item> cards(final Document d, final Config c) { final LinkedHashMap<String, Item> out = new LinkedHashMap<>(); for (final Element a : d.select("a[href]")) { final String url = c.absolute(a.absUrl("href")); if (!c.accepts(url) || out.containsKey(url)) continue; Element box = c.directMedia ? a.closest(".playlist-hover-wrap, .video-item-container, .video-card") : a.closest("article"); if (box == null) box = a.parent(); final Element img = box.selectFirst("img[data-src], img[src]"); final String title = first(a.attr("title"), img == null ? "" : img.attr("alt"), box.select("h1,h2,h3,h4,.video-title,.title,.entry-header").text(), a.text()); final String image = img == null ? "" : c.absolute(img.hasAttr("data-src") ? img.absUrl("data-src") : img.absUrl("src")); if (!title.isEmpty()) out.put(url, new Item(url, title, image)); } return new ArrayList<>(out.values()); }
     static List<String> media(final Document d, final boolean includeScriptUrls) { final LinkedHashMap<String, String> out = new LinkedHashMap<>(); for (final Element e : d.select("video[src], video source[src]")) { final String url = decodeHtmlUrl(e.absUrl("src")); if (!url.isEmpty()) out.put(url, url); } if (includeScriptUrls) { final String html = unpackPacker(d.html()); final Matcher m = MEDIA.matcher(html); while (m.find()) { final String url = decodeHtmlUrl(m.group().replace("\\/", "/")); out.put(url, url); } } return new ArrayList<>(out.values()); }
     private static String decodeHtmlUrl(final String url) { return url.replace("&amp;", "&"); }
     static Document fetchExternal(final String url, final String referer) throws IOException, ExtractionException { final Map<String, List<String>> headers = new java.util.HashMap<>(); headers.put("User-Agent", Collections.singletonList("Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0")); headers.put("Accept", Collections.singletonList("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")); headers.put("Accept-Language", Collections.singletonList("ja")); headers.put("Referer", Collections.singletonList(referer)); headers.put("Cookie", Collections.singletonList("ref_url=jav-fun.cc; aff=690")); final Response r = NewPipe.getDownloader().get(url, headers); if (r.responseCode() != 200) throw new ParsingException("Embedded player returned HTTP " + r.responseCode()); return Jsoup.parse(r.responseBody(), r.latestUrl()); }
-    private static String unpackPacker(final String html) {
-        final Matcher match = Pattern.compile("eval\\(function\\(p,a,c,k,e,d\\)\\{.*?\\}\\('((?:\\\\.|[^'])*)',(\\d+),(\\d+),'((?:\\\\.|[^'])*)'\\.split\\('\\\\|'\\)", Pattern.DOTALL).matcher(html);
+    static String unpackPacker(final String html) {
+        final Matcher match = Pattern.compile("eval\\(function\\(p,a,c,k,e,d\\)\\{.*?\\}\\('((?:\\\\.|[^'])*)',(\\d+),(\\d+),'((?:\\\\.|[^'])*)'\\.split\\('\\|'\\)", Pattern.DOTALL).matcher(html);
         if (!match.find()) return html;
         // Some ordinary page scripts match the loose P.A.C.K.E.R. prefix but omit the
         // dictionary argument. They are not packed media data, so leave the page intact.
         if (match.group(1) == null || match.group(2) == null || match.group(3) == null
                 || match.group(4) == null) return html;
-        String packed = match.group(1).replace("\\\\'", "'").replace("\\\\\\\\", "\\\\"); final int base = Integer.parseInt(match.group(2)); final int count = Integer.parseInt(match.group(3)); final String[] words = match.group(4).replace("\\\\'", "'").split("\\\\|", -1);
-        for (int i = count - 1; i >= 0; i--) if (i < words.length && !words[i].isEmpty()) packed = packed.replaceAll("\\\\b" + Pattern.quote(toBase(i, base)) + "\\\\b", Matcher.quoteReplacement(words[i]));
+        String packed = match.group(1).replace("\\'", "'").replace("\\\\\\\\", "\\\\"); final int base = Integer.parseInt(match.group(2)); final int count = Integer.parseInt(match.group(3)); final String[] words = match.group(4).replace("\\'", "'").split("\\|", -1);
+        for (int i = count - 1; i >= 0; i--) if (i < words.length && !words[i].isEmpty()) packed = packed.replaceAll("\\b" + Pattern.quote(toBase(i, base)) + "\\b", Matcher.quoteReplacement(words[i]));
         return html + "\n" + packed;
     }
     private static String toBase(int value, final int base) { final String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"; if (value == 0) return "0"; final StringBuilder out = new StringBuilder(); while (value > 0) { out.insert(0, chars.charAt(value % base)); value /= base; } return out.toString(); }
