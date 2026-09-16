@@ -14,6 +14,11 @@
 <string name="mrdouga">MRDOUGA</string>
 <string name="ohentai">OHentai</string>
 <string name="xnxx">XNXX</string>
+<string name="iwara">Iwara</string>
+<string name="onefouronetube">141tube</string>
+    <string name="avgle">Avgle.net</string>
+    <string name="hanime1">Hanime1.me</string>
+    <string name="jav_fun">JAV-FUN.cc</string>
 <string name="upload_date_text">Published on %1$s</string>
 <string name="no_player_found">No stream player found. Install VLC?</string>
 <string name="no_player_found_toast">No stream player found (you can install VLC to play it).</string>

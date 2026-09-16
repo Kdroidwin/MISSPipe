@@ -94,6 +94,9 @@ public class PlayerDataSource {
     private static final String OHENTAI_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final String ONE_FOUR_ONE_TUBE_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
 
     /**
      * An approximately 4.3 times greater value than the
@@ -501,6 +504,68 @@ public class PlayerDataSource {
                 .setTransferListener(transferListener);
         return new ProgressiveMediaSource.Factory(upstreamFactory)
                 .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+
+    public ProgressiveMediaSource.Factory getOneFourOneTubeProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://141tube.com/" : pageReferer;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer, "Origin", "https://141tube.com",
+                "Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                "Accept-Encoding", "identity", "Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7");
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(ONE_FOUR_ONE_TUBE_USER_AGENT).setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getAvgleProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = pageReferer == null || pageReferer.isEmpty()
+                ? "https://avgle.net/" : pageReferer;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer, "Origin", "https://avgle.net", "Accept", "video/*;q=0.9,*/*;q=0.5",
+                "Accept-Encoding", "identity", "Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8");
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent(DownloaderImpl.USER_AGENT).setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public ProgressiveMediaSource.Factory getHanime1ProgressiveMediaSourceFactory(
+            @Nullable final String pageReferer) {
+        final String referer = "https://hanime1.me/";
+        final Map<String, String> headers = Map.of(
+                "Referer", referer, "Origin", "https://hanime1.me",
+                "Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                "Accept-Encoding", "identity", "Accept-Language", "ja",
+                "Sec-Fetch-Site", "cross-site", "Sec-Fetch-Mode", "cors",
+                "Sec-Fetch-Dest", "video");
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new DefaultHttpDataSource.Factory()
+                        .setUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0").setDefaultRequestProperties(headers))
+                .setTransferListener(transferListener);
+        return new ProgressiveMediaSource.Factory(upstreamFactory)
+                .setContinueLoadingCheckIntervalBytes(continueLoadingCheckIntervalBytes);
+    }
+
+    public HlsMediaSource.Factory getJavFunHlsMediaSourceFactory(@Nullable final String playerPage) {
+        final String referer = playerPage == null || playerPage.isEmpty() ? "https://luluvdoo.com/" : playerPage;
+        final Map<String, String> headers = Map.of(
+                "Referer", referer, "Origin", "https://luluvdoo.com",
+                "Accept", "*/*", "Accept-Language", "ja",
+                "Cookie", "ref_url=jav-fun.cc; aff=690");
+        final DataSource.Factory upstreamFactory = new PurifiedDataSource.Factory(context,
+                new OkHttpDataSource.Factory(DownloaderImpl.getInstance().getClient())
+                        .setUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0")
+                        .setDefaultRequestProperties(headers)).setTransferListener(transferListener);
+        return new HlsMediaSource.Factory(upstreamFactory).setAllowChunklessPreparation(true);
     }
 
     public SsMediaSource.Factory getSSMediaSourceFactory() {

@@ -69,11 +69,11 @@ public class ErrorActivity extends AppCompatActivity {
     // BUNDLE TAGS
     public static final String ERROR_INFO = "error_info";
 
-    public static final String ERROR_EMAIL_ADDRESS = "feedback@pipepipe.dev";
+    public static final String ERROR_EMAIL_ADDRESS = "Kdroidwin@protonmail.com";
     public static final String ERROR_EMAIL_SUBJECT = "Exception in ";
 
     public static final String ERROR_GITHUB_ISSUE_URL
-            = "https://github.com/InfinityLoop1308/PipePipe/issues";
+            = "https://github.com/Kdroidwin/MISSPipe/issues";
 
     public static final DateTimeFormatter CURRENT_TIMESTAMP_FORMATTER
             = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

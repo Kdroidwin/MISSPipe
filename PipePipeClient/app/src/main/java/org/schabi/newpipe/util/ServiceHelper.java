@@ -303,6 +303,11 @@ public final class ServiceHelper {
             case "MRDOUGA":
             case "OHentai":
             case "XNXX":
+            case "Iwara":
+            case "141tube":
+            case "Avgle.net":
+            case "Hanime1.me":
+            case "JAV-FUN.cc":
                 return false;
             default:
                 return true;
