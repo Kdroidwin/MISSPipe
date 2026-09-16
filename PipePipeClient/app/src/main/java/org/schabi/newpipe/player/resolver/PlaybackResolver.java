@@ -207,6 +207,18 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         } else if (ServiceList.Ohentai.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
             return buildOhentaiProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.OneFourOneTube.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildOneFourOneTubeProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Avgle.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildAvgleProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Hanime1.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildHanime1ProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.JavFun.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.HLS) {
+            return buildJavFunHlsMediaSource(dataSource, stream, cacheKey, metadata);
         }
 
         final DeliveryMethod deliveryMethod = stream.getDeliveryMethod();
@@ -468,6 +480,53 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
                         .setUri(Uri.parse(url.replace("#javsb=1", "")))
                         .setCustomCacheKey(cacheKey)
                         .build());
+    }
+
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildOneFourOneTubeProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource, @NonNull final T stream,
+            @NonNull final String cacheKey, @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) throw new IOException("Empty 141tube media URL");
+        return dataSource.getOneFourOneTubeProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#141tube=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata).setUri(Uri.parse(stripStreamMarker(url, "#141tube=1")))
+                        .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildAvgleProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource, @NonNull final T stream,
+            @NonNull final String cacheKey, @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) throw new IOException("Empty Avgle.net media URL");
+        return dataSource.getAvgleProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#avgle=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata).setUri(Uri.parse(stripStreamMarker(url, "#avgle=1")))
+                        .setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildHanime1ProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource, @NonNull final T stream,
+            @NonNull final String cacheKey, @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) throw new IOException("Empty Hanime1 media URL");
+        return dataSource.getHanime1ProgressiveMediaSourceFactory(null)
+                .createMediaSource(new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#hanime1=1"))).setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> HlsMediaSource buildJavFunHlsMediaSource(
+            @NonNull final PlayerDataSource dataSource, @NonNull final T stream,
+            @NonNull final String cacheKey, @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) throw new IOException("Empty JAV-FUN media URL");
+        return dataSource.getJavFunHlsMediaSourceFactory(extractPageReferer(url, "#javfun=1&ref="))
+                .createMediaSource(new MediaItem.Builder().setTag(metadata)
+                        .setUri(Uri.parse(stripStreamMarker(url, "#javfun=1"))).setCustomCacheKey(cacheKey).build());
     }
 
     @NonNull

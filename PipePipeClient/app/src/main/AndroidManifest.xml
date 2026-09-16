@@ -285,6 +285,16 @@
                 <data android:host="www.ohentai.org" />
                 <data android:host="xnxx.com" />
                 <data android:host="www.xnxx.com" />
+                <data android:host="iwara.tv" />
+                <data android:host="www.iwara.tv" />
+                <data android:host="141tube.com" />
+                <data android:host="www.141tube.com" />
+                <data android:host="avgle.net" />
+                <data android:host="www.avgle.net" />
+                <data android:host="hanime1.me" />
+                <data android:host="www.hanime1.me" />
+                <data android:host="jav-fun.cc" />
+                <data android:host="www.jav-fun.cc" />
                 <data android:pathPrefix="/" />
             </intent-filter>
 
@@ -327,6 +337,16 @@
                 <data android:host="www.ohentai.org" />
                 <data android:host="xnxx.com" />
                 <data android:host="www.xnxx.com" />
+                <data android:host="iwara.tv" />
+                <data android:host="www.iwara.tv" />
+                <data android:host="141tube.com" />
+                <data android:host="www.141tube.com" />
+                <data android:host="avgle.net" />
+                <data android:host="www.avgle.net" />
+                <data android:host="hanime1.me" />
+                <data android:host="www.hanime1.me" />
+                <data android:host="jav-fun.cc" />
+                <data android:host="www.jav-fun.cc" />
                 <data android:pathPrefix="/" />
             </intent-filter>
 

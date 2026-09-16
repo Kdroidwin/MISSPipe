@@ -13,6 +13,10 @@ import org.schabi.newpipe.extractor.services.eporner.EpornerService;
 import org.schabi.newpipe.extractor.services.mrdouga.MrDougaService;
 import org.schabi.newpipe.extractor.services.ohentai.OhentaiService;
 import org.schabi.newpipe.extractor.services.xnxx.XnxxService;
+import org.schabi.newpipe.extractor.services.iwara.IwaraService;
+import org.schabi.newpipe.extractor.services.onefouronetube.OneFourOneTubeService;
+import org.schabi.newpipe.extractor.services.avgle.AvgleService;
+import org.schabi.newpipe.extractor.services.simplehtml.SimpleHtmlVideoService;
 import org.schabi.newpipe.extractor.services.kissjav.KissJavService;
 import org.schabi.newpipe.extractor.services.media_ccc.MediaCCCService;
 import org.schabi.newpipe.extractor.services.missav.MissAvService;
@@ -73,6 +77,11 @@ public final class ServiceList {
     public static final MrDougaService MrDouga = new MrDougaService(12);
     public static final OhentaiService Ohentai = new OhentaiService(13);
     public static final XnxxService XNXX = new XnxxService(14);
+    public static final IwaraService Iwara = new IwaraService(15);
+    public static final OneFourOneTubeService OneFourOneTube = new OneFourOneTubeService(16);
+    public static final AvgleService Avgle = new AvgleService(17);
+    public static final SimpleHtmlVideoService Hanime1 = new SimpleHtmlVideoService(18, SimpleHtmlVideoService.Site.HANIME1);
+    public static final SimpleHtmlVideoService JavFun = new SimpleHtmlVideoService(19, SimpleHtmlVideoService.Site.JAV_FUN);
     /**
      * When creating a new service, put this service in the end of this list,
      * and give it the next free id.
@@ -82,7 +91,7 @@ public final class ServiceList {
      */
     private static final List<StreamingService> SERVICES = Collections.unmodifiableList(
             java.util.Arrays.asList(MissAV, KissJAV, EightyFivePo, Pornhub, JavNoni, JavSB, TokyoMotion,
-                    SpankBang, XHamster, XVideos, Eporner, MrDouga, Ohentai, XNXX));
+                    SpankBang, XHamster, XVideos, Eporner, MrDouga, Ohentai, XNXX, Iwara, OneFourOneTube, Avgle, Hanime1, JavFun));
 
     /**
      * Get all the supported services.
