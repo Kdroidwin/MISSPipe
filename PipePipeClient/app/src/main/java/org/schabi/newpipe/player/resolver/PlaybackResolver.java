@@ -213,6 +213,9 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         } else if (ServiceList.Avgle.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
             return buildAvgleProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
+        } else if (ServiceList.Iwara.equals(service)
+                && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
+            return buildIwaraProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
         } else if (ServiceList.Hanime1.equals(service)
                 && stream.getDeliveryMethod() == DeliveryMethod.PROGRESSIVE_HTTP) {
             return buildHanime1ProgressiveMediaSource(dataSource, stream, cacheKey, metadata);
@@ -516,6 +519,18 @@ public interface PlaybackResolver extends Resolver<StreamInfo, MediaSource> {
         return dataSource.getHanime1ProgressiveMediaSourceFactory(null)
                 .createMediaSource(new MediaItem.Builder().setTag(metadata)
                         .setUri(Uri.parse(stripStreamMarker(url, "#hanime1=1"))).setCustomCacheKey(cacheKey).build());
+    }
+
+    @NonNull
+    private static <T extends Stream> ProgressiveMediaSource buildIwaraProgressiveMediaSource(
+            @NonNull final PlayerDataSource dataSource, @NonNull final T stream,
+            @NonNull final String cacheKey, @NonNull final MediaItemTag metadata) throws IOException {
+        final String url = stream.getContent();
+        if (isNullOrEmpty(url)) throw new IOException("Empty Iwara media URL");
+        return dataSource.getIwaraProgressiveMediaSourceFactory(
+                extractPageReferer(url, "#iwara=1&ref=")).createMediaSource(
+                new MediaItem.Builder().setTag(metadata).setUri(Uri.parse(stripStreamMarker(url, "#iwara=1")))
+                        .setCustomCacheKey(cacheKey).build());
     }
 
     @NonNull

@@ -183,7 +183,7 @@ final class Parser {
         if (match.group(1) == null || match.group(2) == null || match.group(3) == null
                 || match.group(4) == null) return html;
         String packed = match.group(1).replace("\\\\'", "'").replace("\\\\\\\\", "\\\\"); final int base = Integer.parseInt(match.group(2)); final int count = Integer.parseInt(match.group(3)); final String[] words = match.group(4).replace("\\\\'", "'").split("\\\\|", -1);
-        for (int i = count - 1; i >= 0; i--) if (i < words.length && !words[i].isEmpty()) packed = packed.replaceAll("\\\\b" + Pattern.quote(toBase(i, base)) + "\\\\b", Matcher.quoteReplacement(words[i]));
+        for (int i = count - 1; i >= 0; i--) if (i < words.length && !words[i].isEmpty()) packed = packed.replaceAll("\\b" + Pattern.quote(toBase(i, base)) + "\\b", Matcher.quoteReplacement(words[i]));
         return html + "\n" + packed;
     }
     private static String toBase(int value, final int base) { final String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"; if (value == 0) return "0"; final StringBuilder out = new StringBuilder(); while (value > 0) { out.insert(0, chars.charAt(value % base)); value /= base; } return out.toString(); }
