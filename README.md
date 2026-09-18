@@ -15,6 +15,28 @@ Block ads and enjoy a smooth video search and viewing experience.
 * Open source (GPL-3.0)
 * Manage videos from multiple services in a single unified playlist
 
+
+## Supported sources
+- MisSAV
+- KissJAV
+- 85po
+- Pornhub
+- JAV-NONI
+- JAVSB
+- TOKYO Motion
+- SpankBang
+- xHamster
+- XVideos
+- EPORNER
+- MRDOUGA
+- OHentai
+- XNXX
+- Iwara.tv
+- 141tube
+- Avgle.net
+- Hanime1.me(It cannot be accessed from a Japanese IP address.)
+- JAV-FUN.cc(WIP)
+
 ## Installation
 
 1. Download the latest APK from the [Releases](https://github.com/Kdroidwin/MISSPipe/releases) page.
