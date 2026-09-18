@@ -17,7 +17,7 @@ Block ads and enjoy a smooth video search and viewing experience.
 
 
 ## Supported sources
-- MisSAV
+- MISSSAV
 - KissJAV
 - 85po
 - Pornhub
